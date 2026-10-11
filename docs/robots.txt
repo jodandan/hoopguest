@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Sitemap: https://hoopguest.kro.kr/sitemap.xml
+
+#DaumWebMasterTool:1f8c64071db5ba309720a4a634f194daa0022c23cebd7e17a1c4865d85690d30:WiejS/EdbXg9VKmepY6BWg==
+#DaumWebMasterTool:59bc75ddab4364e694a387c1cd57b7551229cdf1f2bc9b20dc3901cea740d0c2:qkAFXzOqPbh5DBHQMDNRMQ==

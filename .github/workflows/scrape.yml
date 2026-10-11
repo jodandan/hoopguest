@@ -1,0 +1,41 @@
+name: scrape
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'   # 30분마다 (GitHub 사정으로 몇 분~수십 분 지연될 수 있음)
+  workflow_dispatch:          # Actions 탭에서 수동 실행
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Scrape list titles
+        run: node scraper/scrape.mjs
+        env:
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}   # 길찾기 장소 자동 확인(없으면 건너뜀)
+      - name: Commit data.json + region/share pages if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          CHANGED=$(git status --porcelain -- docs/index.html docs/r | awk '{print $2}')
+          node scraper/indexnow.mjs $CHANGED || true
+          git add docs/data.json docs/places.json docs/index.html docs/rss.xml docs/r docs/p docs/my docs/sitemap.xml data
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "data: update $(date -u +%Y-%m-%dT%H:%MZ)"
+            git pull --rebase --autostash || true
+            git push
+          fi

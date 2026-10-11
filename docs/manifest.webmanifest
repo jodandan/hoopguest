@@ -1,0 +1,16 @@
+{
+  "name": "훕게스트 — 농구 게스트 모아보기",
+  "short_name": "훕게스트",
+  "description": "농구 게스트·픽업게임·연습경기 글을 지역·날짜·시간대로 모아보기",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F4F2EE",
+  "theme_color": "#CF3326",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

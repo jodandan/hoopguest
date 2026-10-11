@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>페이지를 찾을 수 없어요 — 훕게스트</title>
+<meta http-equiv="refresh" content="3;url=/">
+<script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+  :root{--bg:#F6F2EC;--text:#17181A;--card:#fff;--line:#E8E2D8;--btn:#CF3326;--btn-text:#fff;--cs:0 1px 2px rgba(70,50,20,.05),0 3px 12px rgba(70,50,20,.06);color-scheme:light}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111316;--text:#F4F4F2;--card:#1B1E23;--line:#2A2E35;--btn:#FF7A1A;--btn-text:#111316;--cs:none;color-scheme:dark}}
+  :root[data-theme="dark"]{--bg:#111316;--text:#F4F4F2;--card:#1B1E23;--line:#2A2E35;--btn:#FF7A1A;--btn-text:#111316;--cs:none;color-scheme:dark}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;text-align:center;padding:16px}
+  .b{border:1px solid var(--line);border-radius:20px;box-shadow:var(--cs,none);background:var(--card);padding:24px 20px;max-width:360px}
+  h1{margin:0 0 8px;font-size:20px}
+  a{display:inline-block;margin-top:14px;background:var(--btn);color:var(--btn-text);font-weight:700;padding:10px 16px;border-radius:12px;text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="b">
+    <h1 id="h">🏀 페이지를 찾을 수 없어요</h1>
+    <div id="d">잠시 후 첫 화면으로 이동해요.</div>
+    <script>if(location.pathname.indexOf('/p/')===0){document.getElementById('h').textContent='🏀 지난 모집 글이에요';document.getElementById('d').textContent='모집 기간이 지나 내려간 글이에요. 지금 올라온 글을 보여 드릴게요.';}</script>
+    <a href="/">게스트 목록 보기</a>
+  </div>
+</body>
+</html>
