@@ -7,7 +7,7 @@
 // 바인딩: KV "SUBS" / 시크릿: GH_TOKEN(선택, 워크플로 실행 권한)
 import { handleAccount, linkDevice, unlinkDevice } from './account.js'; // 카카오 로그인·기기 동기화 (/auth/kakao, /me, /logout)
 const SITE = 'https://hoopguest.kro.kr';
-const REPO = 'jodandan/bdr-guest';
+const REPO = 'jodandan/hoopguest';
 const WORKFLOW = 'scrape.yml';
 // 사이트 HTTPS 인증서 발급 전·장애 시에도 읽히도록 저장소 원본을 직접 읽는다
 const DATA_URL = `https://raw.githubusercontent.com/${REPO}/main/docs/data.json`;
