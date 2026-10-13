@@ -8,7 +8,7 @@ const GAP = 6 * 3600e3;
 const toUrl = f => {
   f = f.replace(/^"|"$/g, '');
   if (f === 'docs/index.html') return SITE + '/';
-  const m = f.match(/^docs\/(r\/(?:[a-z-]+\/){1,2})(?:index\.html)?$/);
+  const m = f.match(/^docs\/(r\/(?:[a-z-]+\/){1,2}|g\/\d+\/)(?:index\.html)?$/);
   return m ? SITE + '/' + m[1] : null;
 };
 const urls = [...new Set(process.argv.slice(2).map(toUrl).filter(Boolean))];
