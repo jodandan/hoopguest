@@ -29,9 +29,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          CHANGED=$(git status --porcelain -- docs/index.html docs/r | awk '{print $2}')
+          CHANGED=$(git status --porcelain -- docs/index.html docs/r docs/g | awk '{print $2}')
           node scraper/indexnow.mjs $CHANGED || true
-          git add docs/data.json docs/places.json docs/index.html docs/rss.xml docs/r docs/p docs/my docs/sitemap.xml data
+          git add docs/data.json docs/places.json docs/index.html docs/rss.xml docs/r docs/g docs/p docs/my docs/sitemap.xml data
           if git diff --cached --quiet; then
             echo "no changes"
           else
