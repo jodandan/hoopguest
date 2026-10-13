@@ -1,7 +1,7 @@
 // 앱 껍데기는 캐시 우선, 목록 데이터는 네트워크 우선 (오프라인이면 마지막 목록)
 // + 웹 푸시: 서버는 '새 글 있음' 신호만 보내고, 알림 내용은 여기서 목록을 읽어 만든다
 const CACHE = 'bdr-v9'; // 10-11 아이콘 교체
-const PUSH_API = 'https://bdrguest-push.kiss970322.workers.dev';
+const PUSH_API = 'https://bdrguest-push.hoopguest.workers.dev';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/ball.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
