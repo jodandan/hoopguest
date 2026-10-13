@@ -1,9 +1,11 @@
 // 검색엔진용 지역별 정적 페이지 + 사이트맵 생성 (수집 때마다 갱신)
 // docs/r/<광역>/index.html, docs/r/<광역>/<동네>/index.html, docs/sitemap.xml
 import { mkdir, writeFile, rm, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const SITE = 'https://hoopguest.kro.kr';
 const DOCS = new URL('../docs/', import.meta.url);
+const LASTMOD = new URL('../data/lastmod.json', import.meta.url); // 페이지별 마지막으로 내용이 바뀐 날(사이트맵 lastmod용)
 const HIST = new URL('../data/history.json', import.meta.url); // 지역 페이지 '최근 경향' 통계용 누적 기록(공개 안 됨)
 const GA_ID = 'G-0DWSLR5007';
 
@@ -303,7 +305,7 @@ const iga = w => w + (hasBatchim(w) ? '이' : '가');
 const ieyo = w => w + (hasBatchim(w) ? '이에요' : '예요');
 const top = (arr, n) => Object.entries(arr.reduce((m, x) => (x && (m[x] = (m[x] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1]).slice(0, n);
 // gyms: 체육관 페이지 연결용 [{id, path, name}] — 경향 문단의 '자주 열리는 장소'를 그 페이지로 링크
-function trendHtml(rows, name, today, since, gyms = []) {
+function trendHtml(rows, name, today, since, gyms = [], noVenue = false) {
   if (rows.length < 3) return '';
   const days = Math.max(1, Math.min(28, Math.round((Date.parse(today) - Date.parse(since || today)) / 864e5) + 1));
   const span = days >= 7 ? `최근 ${days}일` : '최근 모은 글';
@@ -322,7 +324,7 @@ function trendHtml(rows, name, today, since, gyms = []) {
   const vc = new Map();
   for (const r of rows) { const v = vn(r.v); const g = (r.id && gq.get(r.id)) || (v && gv.get(v)); const k = g ? g.path : v; if (!k) continue; const e = vc.get(k) || { n: 0, g, v }; e.n++; vc.set(k, e); }
   const vs = [...vc.values()].sort((a, b) => b.n - a.n).slice(0, 5);
-  const vHtml = vs.length ? `<p><b>자주 열리는 장소</b> ${vs.map(e => e.g ? `<a href="${e.g.path}">${esc(e.g.name)}</a> ${e.n}건` : `${esc(e.v)} ${e.n}건`).join(' · ')}</p>` : '';
+  const vHtml = vs.length && !noVenue ? `<p><b>자주 열리는 장소</b> ${vs.map(e => e.g ? `<a href="${e.g.path}">${esc(e.g.name)}</a> ${e.n}건` : `${esc(e.v)} ${e.n}건`).join(' · ')}</p>` : '';
   return `<section class="trend"><h2>${esc(name)} 농구 모집 경향</h2><p>${span} 기준 ${esc(name)} 농구 모집 글은 ${rows.length}건(${esc(kinds)})이에요.${wd.length ? ` 요일은 ${esc(iga(wd.join('·')))} 가장 많았고` : ''}${sl.length ? `${wd.length ? ',' : ''} 시간대는 ${esc(iga(sl[0]))} 가장 많았어요.` : wd.length ? '요.' : ''} 주말(토·일) 글은 ${weekend}건으로 전체의 ${Math.round(weekend / rows.length * 100)}%예요.</p>
 <p><b>요일별</b> ${byWd.map(([w, n]) => `${w} ${n}`).join(' · ')}${bySl.length ? `<br><b>시간대별</b> ${bySl.map(([s, n]) => `${s} ${n}건`).join(' · ')}` : ''}</p>${vHtml}</section>`;
 }
@@ -383,7 +385,10 @@ export async function buildPages(data) {
       const near = all.filter(d => d[1] !== n).map(d => [d, km(me, d)]).sort((a, b) => a[1] - b[1]).slice(0, 8);
       const nearNames = new Set([n, ...near.slice(0, 5).map(([d]) => d[1])]);
       const mine = live.filter(p => p.region1 === r1 && p.region2 === n);
-      const nearby = live.filter(p => p.region2 && nearNames.has(p.region2) && !(p.region1 === r1 && p.region2 === n));
+      const nearRank = new Map(near.map(([d], i) => [d[1], i]));
+      // 근처 글은 가까운 동네 순(같은 거리면 날짜순) — 이웃 페이지마다 보여 주는 글이 달라지게
+      const nearby = live.filter(p => p.region2 && nearNames.has(p.region2) && !(p.region1 === r1 && p.region2 === n))
+        .map((p, i) => [p, i]).sort((x, y) => (nearRank.get(x[0].region2) ?? 99) - (nearRank.get(y[0].region2) ?? 99) || x[1] - y[1]).map(([p]) => p);
       const nm = label(r1, n);
       const hRows = hist.filter(h => h.r1 === r1 && h.r2 === n);
       // 자기 지역 글이 지금 없고 최근 28일 기록도 3건 미만이면 근처 글만 보여 주는 얇은 페이지 → 검색 노출 안 함(사이트맵·RSS 제외)
@@ -392,10 +397,10 @@ export async function buildPages(data) {
       out.push([`/r/${s1}/${s}/`, page({ robots: thin ? 'noindex,follow' : '',
         path: `/r/${s1}/${s}/`, today, updated,
         title: `${nm} 농구 게스트 모집 · 픽업게임 · 교류전 | 훕게스트`,
-        desc: `${nm} 농구 게스트 구함·픽업게임·교류전 모집 글을 날짜·시간순으로 모아봐요.${mine.length ? ` 지금 ${mine.length}건` : ''}${mine.length < 3 && nearby.length ? `${mine.length ? ',' : ' 지금'} 근처 지역 ${nearby.length}건` : ''}. 30분마다 갱신.`,
+        desc: `${nm} 농구 게스트 구함·픽업게임·교류전 모집 글을 날짜·시간순으로 모아봐요.${mine.length ? ` 지금 ${mine.length}건` : ''}${mine.length < 3 && nearby.length ? `${mine.length ? ',' : ' 지금'} 근처 지역 ${Math.min(nearby.length, 10)}건` : ''}. 30분마다 갱신.`,
         h1: `${nm} 농구 게스트 · 픽업게임`,
         intro: mine.length >= 3 ? `${nm}에서 지금 모집 중인 농구 게스트·픽업게임·교류전 글 ${mine.length}건이에요.` : mine.length ? `${nm} 글 ${mine.length}건과 가까운 지역 글을 함께 보여 드려요.` : `${nm}에는 지금 모집 글이 없어요. 가까운 지역 글을 대신 보여 드려요.`,
-        posts: mine.length >= 3 ? mine : [...mine, ...nearby].slice(0, 40),
+        posts: mine.length >= 3 ? mine : [...mine, ...nearby.slice(0, 10).sort((x, y) => (x.date || '9999').localeCompare(y.date || '9999') || (x.start || '99').localeCompare(y.start || '99'))], // 근처 글은 10건까지만(이웃 지역 페이지끼리 내용이 겹치지 않게)
         crumbs: [['홈', '/'], [r1, `/r/${s1}/`], [nm, `/r/${s1}/${s}/`]],
         links: [...(gymLinks.length ? [[`${nm} 체육관별 모집`, gymLinks]] : []), ['가까운 지역', near.map(([d]) => [label(d[0], d[1]), `/r/${R1[d[0]]}/${d[2]}/`])], ['광역 지역', r1Links]],
         cta: `/?r=${encodeURIComponent('내 근처')}&h=${encodeURIComponent(n)}&km=10`, home: n,
@@ -422,7 +427,7 @@ export async function buildPages(data) {
       crumbs: [['홈', '/'], [g.r1, `/r/${R1[g.r1]}/`], ...(g.r2 ? [[area, reg]] : []), [g.name, g.path]],
       links: [...(others.length ? [[`${area} 다른 체육관`, others]] : []), [`${area} 농구 게스트`, [[`${area} 전체 모집 글`, reg]]], ['광역 지역', r1Links]],
       cta: g.r2 ? `/?r=${encodeURIComponent('내 근처')}&h=${encodeURIComponent(g.r2)}&km=10` : `/?r=${encodeURIComponent(g.r1)}`, home: g.r2,
-      trend: trendHtml(g.rows, g.name, today, hist.since),
+      trend: trendHtml(g.rows, g.name, today, hist.since, [], true),
     })]);
   }
   await rm(new URL('r/', DOCS), { recursive: true, force: true });
@@ -441,7 +446,17 @@ export async function buildPages(data) {
     await writeFile(new URL('index.html', dir), html);
   }
   const lastmod = updated.slice(0, 10);
-  const sm = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${SITE}/</loc><lastmod>${lastmod}</lastmod><changefreq>hourly</changefreq><priority>1.0</priority></url>\n${out.filter(([, , thin]) => !thin).map(([p]) => `  <url><loc>${SITE}${p}</loc><lastmod>${lastmod}</lastmod><changefreq>hourly</changefreq><priority>${p.startsWith('/g/') ? '0.5' : p.split('/').length === 4 ? '0.8' : '0.6'}</priority></url>`).join('\n')}\n</urlset>\n`;
+  // lastmod: 페이지 내용(갱신 시각 문구 제외)이 실제로 바뀐 날만 기록 — 매번 모든 페이지를 오늘로 찍으면 검색엔진이 lastmod를 믿지 않음
+  let lm = {};
+  try { lm = JSON.parse(await readFile(LASTMOD, 'utf8')); } catch {}
+  const lmNext = {};
+  for (const [p, html] of out) {
+    const h = createHash('sha1').update(html.replace(/마지막 갱신: [^<]*/, '').replace(/"numberOfItems":\d+/, '')).digest('hex').slice(0, 12);
+    lmNext[p] = lm[p] && lm[p][0] === h ? lm[p] : [h, lastmod];
+  }
+  await mkdir(new URL('.', LASTMOD), { recursive: true });
+  await writeFile(LASTMOD, JSON.stringify(lmNext));
+  const sm = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${SITE}/</loc><lastmod>${lastmod}</lastmod></url>\n${out.filter(([, , thin]) => !thin).map(([p]) => `  <url><loc>${SITE}${p}</loc><lastmod>${lmNext[p][1]}</lastmod></url>`).join('\n')}\n</urlset>\n`;
   await writeFile(new URL('sitemap.xml', DOCS), sm);
   // RSS: 오늘 모집 글이 있는 지역 페이지 목록 (네이버 서치어드바이저 RSS 제출용)
   const pub = new Date(updated).toUTCString();
