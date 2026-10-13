@@ -15,7 +15,8 @@
 <script>try{var hgT=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(hgT==='dark'||hgT==='light'){document.documentElement.dataset.theme=hgT;document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.content=hgT==='dark'?'#111316':'#CF3326'})}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,7 +38,7 @@
    기본은 기기 설정, 위쪽 해/달 버튼으로 바꾸면 html[data-theme]로 고정 */
 :root{
   --bg:#F6F2EC;--card:#fff;--text:#17181A;--sub:#5E5A53;--muted:#7A766E;--line:#E8E2D8;--line2:#D3CDC2;
-  --accent:#B4231A;--accent-strong:#CF3326;--on-accent:#fff;--hero:#CF3326;--hero-text:#fff;--hero-sub:rgba(255,255,255,.92);
+  --accent:#B4231A;--accent-strong:#CF3326;--on-accent:#fff;--hero:#CF3326;--hero-text:#fff;--hero-sub:#fff;
   --ink:#17181A;--on-ink:#fff;--chip:#fff;--chip-on:#17181A;--chip-on-text:#fff;--pill:#F1EEE8;--pill-text:#17181A;
   --hl:#FFE7A3;--hl-text:#3D2F00;--star:#B07D00;--field:#8F887B;--fresh:#FFF1C2;--fresh-line:#F0D27A;--track:#E6E2DA;--seg-on:#fff;--soft:#FBEDEB;--shadow:0 6px 18px rgba(23,24,26,.08);--card-line:#EFEAE2;--card-shadow:0 1px 2px rgba(70,50,20,.05),0 3px 12px rgba(70,50,20,.06);--btn-soft:#FBEDEB;--btn-soft2:#F3EFE8;
   --yellow:var(--hl);--shadow-c:transparent;
