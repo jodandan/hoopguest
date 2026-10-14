@@ -128,6 +128,8 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     return back(st.ret, 'login=' + t);
   }
 
+  // 로그인 안 한 방문자의 '로그인 기능 켜져 있나' 확인(토큰 없이 GET /me)은 401 대신 200 — 브라우저 콘솔 오류가 안 나게
+  if (p === '/me' && req.method === 'GET' && !req.headers.get('Authorization')) return json(req, { login: false });
   const u = await who(req, env);
   if (!u) return json(req, { error: 'login required' }, 401);
   if (p === '/me' && req.method === 'GET') {
