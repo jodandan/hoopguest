@@ -299,7 +299,14 @@ footer>a{padding:8px 0}
   window.GA_ID = 'G-0DWSLR5007'; // GA4 측정 ID
   window.dataLayer = window.dataLayer || [];
   function gtag(){ dataLayer.push(arguments); }
-  if (/^G-[A-Z0-9]{6,}$/.test(GA_ID) && GA_ID !== 'G-XXXXXXXXXX' && location.hostname === 'hoopguest.kro.kr') {
+  // 운영자 기기 집계 제외: ?noga=1 로 한 번 열면 이 기기(브라우저)는 GA를 안 불러옴, ?noga=0 으로 해제
+  var NOGA = false;
+  try { var ng = /[?&]noga=([01])\b/.exec(location.search);
+    if (ng) { if (ng[1] === '1') localStorage.setItem('bdr.noga', '1'); else localStorage.removeItem('bdr.noga');
+      history.replaceState(null, '', location.pathname + location.hash);
+      setTimeout(function () { alert(ng[1] === '1' ? '이 기기는 이제 방문 통계(GA)에서 빠집니다.' : '이 기기도 다시 방문 통계(GA)에 잡힙니다.'); }, 300); }
+    NOGA = localStorage.getItem('bdr.noga') === '1'; } catch (e) {}
+  if (!NOGA && /^G-[A-Z0-9]{6,}$/.test(GA_ID) && GA_ID !== 'G-XXXXXXXXXX' && location.hostname === 'hoopguest.kro.kr') {
     const s = document.createElement('script'); s.async = true;
     s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID; document.head.appendChild(s);
     gtag('js', new Date()); gtag('config', GA_ID);
