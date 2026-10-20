@@ -148,7 +148,7 @@ export function parseDate(title, posted) {
     if ((posted - dt) / 864e5 > 60) dt = mk(py + 1, m, d);
     return dt;
   };
-  let m, span = null, dt = null;
+  let m, span = null, dt = null, moved = false; // moved: 달을 넘기거나 요일로 보정해 날짜를 옮김
   // '26.10.01' / '2026.10.01' / '26-10-01' 처럼 연도가 붙은 숫자 날짜
   if ((m = t.match(/(?<![\d:])(?:20)?(\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})(?![\d:])/)) && +m[2] >= 1 && +m[2] <= 12 && Math.abs(2000 + +m[1] - py) <= 1) { dt = mk(2000 + +m[1], +m[2], +m[3]); span = m[0]; }
   else if ((m = t.match(/(?:20\d{2}\s*[년.\-/]\s*)?(?<![\d/.:])(\d{1,2})\s*월\s*(\d{1,2})(?![\d:])\s*일?/)) && +m[1] <= 12) { dt = fix(+m[1], +m[2]); span = m[0]; }
@@ -157,7 +157,7 @@ export function parseDate(title, posted) {
   else if ((m = t.match(/(?<![\d:~\-])(\d{1,2})\s*일(?!\s*[~\-])/))) {
     const d = +m[1];
     let mm = pm;
-    if (d < pd - 3) mm = pm + 1;
+    if (d < pd - 3) { mm = pm + 1; moved = true; }
     dt = mm > 12 ? mk(py + 1, 1, d) : mk(py, mm, d);
     span = m[0];
   } else if ((m = t.match(/(오늘|금일)/))) { dt = posted; span = m[0]; }
@@ -175,7 +175,7 @@ export function parseDate(title, posted) {
       const y = dt.getUTCFullYear(), mo = dt.getUTCMonth() + 1, d = dt.getUTCDate();
       const alt = [mo - 1, mo + 1].map(x => x < 1 ? mk(y - 1, 12, d) : x > 12 ? mk(y + 1, 1, d) : mk(y, x, d))
         .filter(x => x.getUTCDate() === d && x.getUTCDay() === want && (x - posted) / 864e5 >= -3 && (x - posted) / 864e5 <= 45);
-      if (alt.length) dt = alt[0];
+      if (alt.length) { dt = alt[0]; moved = true; }
       else {
         // 앞뒤 달에도 없으면 ±2일 안에서 요일이 맞고 게시일 이후인 날 (예: 10/1 게시 '10월1일(토)' → 10/3)
         const near = [1, -1, 2, -2].map(k => new Date(+dt + k * 864e5))
@@ -184,6 +184,8 @@ export function parseDate(title, posted) {
       }
     }
   }
+  // 너무 먼 날짜는 잘못 읽었을 가능성이 커서 '날짜 미정'으로 둠 (예: 10/17 게시 '11일' → 11/11, 10/18 게시 '10/19 (목)' → 11/19, 옛 제목 '8월4일' → 내년)
+  if (dt) { const ahead = (dt - posted) / 864e5; if (ahead > 60 || (moved && ahead > 20)) dt = null; }
   return { date: dt ? ymd(dt) : null, span };
 }
 
