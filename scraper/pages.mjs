@@ -8,6 +8,7 @@ const DOCS = new URL('../docs/', import.meta.url);
 const LASTMOD = new URL('../data/lastmod.json', import.meta.url); // 페이지별 마지막으로 내용이 바뀐 날(사이트맵 lastmod용)
 const HIST = new URL('../data/history.json', import.meta.url); // 지역 페이지 '최근 경향' 통계용 누적 기록(공개 안 됨)
 const GA_ID = 'G-0DWSLR5007';
+const GUIDE_UPDATED = '2026-10-20'; // docs/guide/index.html(손으로 쓰는 이용 가이드)를 고친 날 — 고치면 같이 바꿀 것
 
 export const R1 = { 서울: 'seoul', 경기: 'gyeonggi', 인천: 'incheon' };
 // [표시명(데이터 region2), 슬러그, 위도, 경도]
@@ -124,7 +125,7 @@ ${extra}<a class="cta" href="${esc(cta)}">날짜·시간 필터로 보기 →</a
 ${posts.length ? CAFE_NOTE : ''}${list}
 ${trend}
 <section class="links">${links.map(([t, ls]) => `<h2>${esc(t)}</h2><p>${ls.map(([n, u]) => `<a href="${u}">${esc(n)}</a>`).join('')}</p>`).join('')}</section>
-<footer>다음카페 [BDR]동아리농구방과 네이버 카페 NSB 농심카페(운영진 허락)의 공개 글 제목만 모아 30분마다 갱신하는 비공식 사이트입니다. 비용·장소·연락처는 원문에서 확인하세요. 마지막 갱신: ${esc(new Date(Date.parse(updated) + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '))} (KST)</footer>
+<footer>다음카페 [BDR]동아리농구방과 네이버 카페 NSB 농심카페(운영진 허락)의 공개 글 제목만 모아 30분마다 갱신하는 비공식 사이트입니다. 비용·장소·연락처는 원문에서 확인하세요. 마지막 갱신: ${esc(new Date(Date.parse(updated) + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '))} (KST) · <a href="/guide/">농구 게스트 이용 가이드</a></footer>
 </main></body></html>`;
 }
 
@@ -208,7 +209,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 "Noto Sans KR
 header{background:#E0201B;color:#fff;padding:16px 0;border-bottom:3px solid #0E0E10}
 header a{color:#fff;font-weight:700;text-decoration:none;display:inline-block;padding:4px 0}
 .c{margin:20px 0 14px;background:var(--card);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);padding:16px}
-.when{font-size:22px;font-weight:800;line-height:1.3}
+.when{font-size:22px;font-weight:800;line-height:1.3;margin:0}
 .where{display:inline-block;margin:8px 0 10px;background:#FFE14D;color:#0E0E10;font-weight:700;font-size:14px;padding:2px 8px;border:2px solid #0E0E10}
 .t{font-size:16px;word-break:keep-all;overflow-wrap:anywhere;margin:0 0 6px}
 .m{font-size:13px;color:var(--sub)}
@@ -254,7 +255,7 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <header><div class="w" style="padding-bottom:0"><a href="/">🏀 훕게스트</a></div></header>
 <main class="w">
 <div class="c">
-${p.closed ? '<p class="x">마감됐다고 표시된 글이에요. 아래에서 다른 글을 찾아보세요.</p>' : p.date && p.date < today ? '<p class="x">지난 일정이에요. 아래에서 다른 글을 찾아보세요.</p>' : ''}<p class="x" id="over" hidden></p><div class="when">${esc(when)}</div>
+${p.closed ? '<p class="x">마감됐다고 표시된 글이에요. 아래에서 다른 글을 찾아보세요.</p>' : p.date && p.date < today ? '<p class="x">지난 일정이에요. 아래에서 다른 글을 찾아보세요.</p>' : ''}<p class="x" id="over" hidden></p><h1 class="when">${esc(when)}</h1>
 <span class="where">${esc(place)} · ${esc(kind)}</span>
 <p class="t">${esc(t)}</p>
 <div class="m">${esc(src)} 글 · 비용·장소·연락처는 원문에서 확인하세요</div>
@@ -347,7 +348,11 @@ function gymList(hist, live) {
   for (const [id, rows] of by) {
     if (rows.length < GYM_MIN) continue;
     const q = top(rows.map(r => r.q), 1)[0][0];
-    const r1 = top(rows.map(r => r.r1), 1)[0][0], r2 = (top(rows.map(r => r.r2), 1)[0] || [''])[0];
+    let r1 = top(rows.map(r => r.r1), 1)[0][0], r2 = (top(rows.map(r => r.r2), 1)[0] || [''])[0];
+    // 검색어 앞의 지역명('인천 농구연구소', '고양 스킬존')이 글의 지역 태그보다 정확함 — 하나로 모이면 그걸 쓰고, 서로 다르면 동네를 표시하지 않음
+    const pre = [...new Set(rows.map(r => (String(r.q).match(/^(\S+)\s/) || [])[1]).filter(x => x && R_NAMES.has(x)))].map(x => R1[x] ? [x, ''] : [(Object.entries(DISTRICTS).find(([, ds]) => ds.some(d => d[0] === x)) || [''])[0], x]).filter(([a]) => a);
+    if (pre.length === 1) [r1, r2] = pre[0];
+    else if (pre.length > 1) { const s1 = new Set(pre.map(([a]) => a)); r1 = s1.size === 1 ? pre[0][0] : ''; r2 = ''; }
     let name = q; const m = q.match(/^(\S+)\s+(.+)$/);
     if (m && R_NAMES.has(m[1])) name = m[2];
     if (!/^\d+$/.test(id)) continue;
@@ -410,7 +415,7 @@ export async function buildPages(data) {
   }
   // 체육관별 페이지 /g/<카카오 장소 ID>/ — 최근 28일 글이 GYM_MIN건 이상인 확인된 장소만
   for (const g of gyms) {
-    const area = g.r2 ? label(g.r1, g.r2) : g.r1;
+    const area = g.r2 ? label(g.r1, g.r2) : g.r1 || '수도권';
     const mine = live.filter(p => g.qs.has(placeOf(unent(p.title), p.region2) || ''));
     const others = gyms.filter(x => x !== g && x.r1 === g.r1 && x.r2 === g.r2).map(x => [x.name, x.path]);
     const reg = dUrl(g.r1, g.r2);
@@ -424,9 +429,9 @@ export async function buildPages(data) {
       empty: `<p class="empty">지금 ${esc(g.name)} 모집 글은 없어요. <a href="${reg}">${esc(area)} 전체 모집 글</a>을 확인해 보세요.</p>`,
       extra: `<div class="mp"><a href="https://map.kakao.com/link/to/${g.id}" target="_blank" rel="noopener">카카오맵 길찾기</a><a href="https://map.naver.com/p/search/${encodeURIComponent(g.q)}" target="_blank" rel="noopener">네이버 지도</a></div>`,
       place: { name: g.name, url: SITE + g.path, hasMap: `https://map.kakao.com/link/map/${g.id}`, sport: 'Basketball', containedInPlace: { '@type': 'AdministrativeArea', name: area } },
-      crumbs: [['홈', '/'], [g.r1, `/r/${R1[g.r1]}/`], ...(g.r2 ? [[area, reg]] : []), [g.name, g.path]],
-      links: [...(others.length ? [[`${area} 다른 체육관`, others]] : []), [`${area} 농구 게스트`, [[`${area} 전체 모집 글`, reg]]], ['광역 지역', r1Links]],
-      cta: g.r2 ? `/?r=${encodeURIComponent('내 근처')}&h=${encodeURIComponent(g.r2)}&km=10` : `/?r=${encodeURIComponent(g.r1)}`, home: g.r2,
+      crumbs: [['홈', '/'], ...(R1[g.r1] ? [[g.r1, `/r/${R1[g.r1]}/`]] : []), ...(g.r2 ? [[area, reg]] : []), [g.name, g.path]],
+      links: [...(others.length && g.r1 ? [[`${area} 다른 체육관`, others]] : []), ...(R1[g.r1] ? [[`${area} 농구 게스트`, [[`${area} 전체 모집 글`, reg]]]] : []), ['광역 지역', r1Links]],
+      cta: g.r2 ? `/?r=${encodeURIComponent('내 근처')}&h=${encodeURIComponent(g.r2)}&km=10` : g.r1 ? `/?r=${encodeURIComponent(g.r1)}` : '/', home: g.r2,
       trend: trendHtml(g.rows, g.name, today, hist.since, [], true),
     })]);
   }
@@ -456,7 +461,7 @@ export async function buildPages(data) {
   }
   await mkdir(new URL('.', LASTMOD), { recursive: true });
   await writeFile(LASTMOD, JSON.stringify(lmNext));
-  const sm = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${SITE}/</loc><lastmod>${lastmod}</lastmod></url>\n${out.filter(([, , thin]) => !thin).map(([p]) => `  <url><loc>${SITE}${p}</loc><lastmod>${lmNext[p][1]}</lastmod></url>`).join('\n')}\n</urlset>\n`;
+  const sm = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${SITE}/</loc><lastmod>${lastmod}</lastmod></url>\n  <url><loc>${SITE}/guide/</loc><lastmod>${GUIDE_UPDATED}</lastmod></url>\n${out.filter(([, , thin]) => !thin).map(([p]) => `  <url><loc>${SITE}${p}</loc><lastmod>${lmNext[p][1]}</lastmod></url>`).join('\n')}\n</urlset>\n`;
   await writeFile(new URL('sitemap.xml', DOCS), sm);
   // RSS: 오늘 모집 글이 있는 지역 페이지 목록 (네이버 서치어드바이저 RSS 제출용)
   const pub = new Date(updated).toUTCString();
