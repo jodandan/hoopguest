@@ -39,7 +39,7 @@
   --bg:#F6F2EC;--card:#fff;--text:#17181A;--sub:#5E5A53;--muted:#7A766E;--line:#E8E2D8;--line2:#D3CDC2;
   --accent:#B4231A;--accent-strong:#CF3326;--on-accent:#fff;--hero:#CF3326;--hero-text:#fff;--hero-sub:#fff;
   --ink:#17181A;--on-ink:#fff;--chip:#fff;--chip-on:#17181A;--chip-on-text:#fff;--pill:#F1EEE8;--pill-text:#17181A;
-  --hl:#FFE7A3;--hl-text:#3D2F00;--star:#B07D00;--field:#8F887B;--fresh:#FFF1C2;--fresh-line:#F0D27A;--track:#E6E2DA;--seg-on:#fff;--soft:#FBEDEB;--shadow:0 6px 18px rgba(23,24,26,.08);--card-line:#EFEAE2;--card-shadow:0 1px 2px rgba(70,50,20,.05),0 3px 12px rgba(70,50,20,.06);--btn-soft:#FBEDEB;--btn-soft2:#F3EFE8;
+  --new-dot:#C98A00;--hl:#FFE7A3;--hl-text:#3D2F00;--star:#B07D00;--field:#8F887B;--fresh:#FFF1C2;--fresh-line:#F0D27A;--track:#E6E2DA;--seg-on:#fff;--soft:#FBEDEB;--shadow:0 6px 18px rgba(23,24,26,.08);--card-line:#EFEAE2;--card-shadow:0 1px 2px rgba(70,50,20,.05),0 3px 12px rgba(70,50,20,.06);--btn-soft:#FBEDEB;--btn-soft2:#F3EFE8;
   --yellow:var(--hl);--shadow-c:transparent;
   --f-display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --f-head:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
@@ -56,12 +56,12 @@
   --bg:#111316;--card:#1B1E23;--text:#F4F4F2;--sub:#A3A7AE;--muted:#8F949C;--line:#2A2E35;--line2:#383D45;
   --accent:#FF8A33;--accent-strong:#FF7A1A;--on-accent:#111316;--hero:#16181C;--hero-text:#F4F4F2;--hero-sub:#A3A7AE;
   --ink:#F4F4F2;--on-ink:#111316;--chip:#1E2126;--chip-on:#FF7A1A;--chip-on-text:#111316;--pill:#262A30;--pill-text:#E3E4E6;
-  --hl:#FFC48F;--hl-text:#2A1500;--star:#FF7A1A;--field:#6B717A;--fresh:#33280F;--fresh-line:#7A5A1E;--track:#1E2126;--seg-on:#2C3037;--soft:#2A1D12;--shadow:0 6px 18px rgba(0,0,0,.35);--card-line:#2A2E35;--card-shadow:none;--btn-soft:#2A1D12;--btn-soft2:#262A30;--src-nv:#5FD38A;--src-dm:#FF8A7E;color-scheme:dark}}
+  --new-dot:#FFC48F;--hl:#FFC48F;--hl-text:#2A1500;--star:#FF7A1A;--field:#6B717A;--fresh:#33280F;--fresh-line:#7A5A1E;--track:#1E2126;--seg-on:#2C3037;--soft:#2A1D12;--shadow:0 6px 18px rgba(0,0,0,.35);--card-line:#2A2E35;--card-shadow:none;--btn-soft:#2A1D12;--btn-soft2:#262A30;--src-nv:#5FD38A;--src-dm:#FF8A7E;color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#111316;--card:#1B1E23;--text:#F4F4F2;--sub:#A3A7AE;--muted:#8F949C;--line:#2A2E35;--line2:#383D45;
   --accent:#FF8A33;--accent-strong:#FF7A1A;--on-accent:#111316;--hero:#16181C;--hero-text:#F4F4F2;--hero-sub:#A3A7AE;
   --ink:#F4F4F2;--on-ink:#111316;--chip:#1E2126;--chip-on:#FF7A1A;--chip-on-text:#111316;--pill:#262A30;--pill-text:#E3E4E6;
-  --hl:#FFC48F;--hl-text:#2A1500;--star:#FF7A1A;--field:#6B717A;--fresh:#33280F;--fresh-line:#7A5A1E;--track:#1E2126;--seg-on:#2C3037;--soft:#2A1D12;--shadow:0 6px 18px rgba(0,0,0,.35);--card-line:#2A2E35;--card-shadow:none;--btn-soft:#2A1D12;--btn-soft2:#262A30;--src-nv:#5FD38A;--src-dm:#FF8A7E;color-scheme:dark}
+  --new-dot:#FFC48F;--hl:#FFC48F;--hl-text:#2A1500;--star:#FF7A1A;--field:#6B717A;--fresh:#33280F;--fresh-line:#7A5A1E;--track:#1E2126;--seg-on:#2C3037;--soft:#2A1D12;--shadow:0 6px 18px rgba(0,0,0,.35);--card-line:#2A2E35;--card-shadow:none;--btn-soft:#2A1D12;--btn-soft2:#262A30;--src-nv:#5FD38A;--src-dm:#FF8A7E;color-scheme:dark}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--text);font:var(--fs-base)/1.5 var(--f-body);transition:background-color var(--dur-slow) ease,color var(--dur-slow) ease}
@@ -193,6 +193,35 @@ button{font:inherit;color:inherit}
 .tag.soon{background:var(--accent-strong);color:var(--on-accent)}
 .tag.x{background:var(--ink);color:var(--on-ink)}
 .newwrap{display:inline-flex}
+/* 카드 다이어트 + 인터랙션 (2026-10-22) */
+.newdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--new-dot);margin-right:1px}
+.tag.soon.calm{background:var(--btn-soft);color:var(--accent)}
+.tag.live{background:var(--pill);color:var(--sub)}
+.card.live .time,.card.live .title{opacity:.62}
+.card{position:relative;touch-action:pan-y}
+.card:not(.open) .cacts,.card:not(.open) .dup{display:none}
+.card:not(.open) .title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card.open{box-shadow:var(--shadow)}
+.card .more{position:absolute;right:6px;bottom:6px;width:36px;height:32px;border:0;border-radius:var(--r-sm);background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.card .more svg{width:20px;height:20px;transition:transform var(--dur) ease}
+.card.open .more svg{transform:rotate(180deg)}
+.card .more:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.card .body{padding-right:22px}
+.card.open .cacts{animation:boxin .2s ease}
+.card .swipe{position:absolute;top:0;bottom:0;left:100%;margin-left:10px;width:96px;border-radius:var(--r-lg);background:var(--hl);color:var(--hl-text);display:flex;align-items:center;justify-content:center;gap:4px;font:700 var(--fs-sm)/1.2 var(--f-body);text-align:center;pointer-events:none}
+.card.swiping{transition:none}
+.card.swipeback{transition:transform var(--dur) ease}
+#list{overflow-x:clip}
+.daystrip{position:sticky;top:0;z-index:6;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px 2px;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+.daystrip::-webkit-scrollbar{display:none}
+.daystrip button{flex:none;min-height:34px;padding:0 12px;border:1px solid var(--line2);border-radius:var(--r-pill);background:var(--chip);color:var(--text);font:700 var(--fs-sm)/1 var(--f-body);cursor:pointer;transition:background-color var(--dur-fast) ease,color var(--dur-fast) ease}
+.daystrip button small{font-weight:500;color:var(--sub);margin-left:3px}
+.daystrip button[aria-current="true"]{background:var(--chip-on);border-color:var(--chip-on);color:var(--chip-on-text)}
+.daystrip button[aria-current="true"] small{color:inherit;opacity:.8}
+.daystrip button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#list.has-strip .dayh{top:51px}
+#list.has-strip .dayg{scroll-margin-top:51px}
+@media (prefers-reduced-motion:reduce){.card .more svg,.card.swipeback,.daystrip button{transition:none}.card.open .cacts{animation:none}}
 .tag.new{background:var(--hl);color:var(--hl-text);letter-spacing:.04em}
 .title{font-size:var(--fs-base);font-weight:500;line-height:1.45;padding:2px 0;word-break:keep-all;overflow-wrap:anywhere;text-decoration:none;display:block}
 .title:hover{text-decoration:underline;text-decoration-thickness:2px;text-decoration-color:var(--accent)}
@@ -696,10 +725,17 @@ footer>a{padding:8px 0}
     cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     pin: '<path d="M12 21s-6.5-5.8-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.2 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/>'
   }).map(([k, d]) => [k, `<svg class="ai" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`]));
+  const OPEN = new Set(); // 펼친 카드(글 키) — 다시 그려도 유지
+  const isLive = p => !p.closed && !p.amb && p.date === TODAY && !!p.start && minsToStart(p) <= 0 && !isOver(p);
+  function timeTag(p) {
+    if (startsSoon(p)) { const d = minsToStart(p); return `<span class="tag soon${d > 30 ? ' calm' : ''}">${soonLabel(p)}</span>`; }
+    return isLive(p) ? '<span class="tag live">진행 중</span>' : '';
+  }
+  const CHEV = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function card(p, dup = []) {
     const tags = [];
-    if (isNew(p)) tags.push('<span class="newwrap"><span class="tag new">NEW!</span></span>');
-    if (startsSoon(p)) tags.push(`<span class="tag soon">${soonLabel(p)}</span>`);
+    if (isNew(p)) tags.push('<span class="newdot" title="새 글"><span class="sr">새 글</span></span>');
+    { const tt = timeTag(p); if (tt) tags.push(tt); }
     if (p.region1) tags.push(`<span class="tag">${esc(regionLabel(p))}</span>`);
     if (S.r1 === NEARBY && S.home && GEO[p.region2]) { const d = km(S.home, p.region2); tags.push(`<span class="tag g">${d < 2 ? '내 동네' : '약 ' + Math.round(d) + 'km'}</span>`); }
     if (p.free && !(p.tags || []).includes('무료')) tags.push('<span class="tag g">무료</span>');
@@ -717,14 +753,17 @@ footer>a{padding:8px 0}
     const rep = reported.has(p.key) ? '<span>신고됨</span>' : `<button class="rep" type="button" data-key="${esc(p.key)}" aria-expanded="false" aria-label="정보가 틀렸나요? 알려주기">정보 오류</button>`;
     const seen = seenPosts.has(p.key) && !saved.has(p.key);
     const dupHtml = dup.length ? `<details class="dup"><summary>비슷한 글 ${dup.length}건 더</summary>${dup.map(q => `<a href="${esc(q.url)}" target="_blank" rel="noopener" class="title dupt" data-key="${esc(q.key)}">${esc(unent(q.title))}</a><span class="dupm"><b class="srcm ${q.src === 'naver' ? 'nv' : 'dm'}">${srcName(q)}</b> · ${ago(q.posted)} · 조회 ${q.views ?? 0}</span>`).join('')}</details>` : '';
-    return `<article class="card${p.closed ? ' closed' : ''}${seen ? ' seen' : ''}${FRESH.has(p.key) ? ' fresh' : ''}">
+    const acts = `${p.closed ? '' : nav}${p.closed ? '' : shr}${ics}`, op = OPEN.has(p.key);
+    const more = acts || dupHtml ? `<button class="more" type="button" data-key="${esc(p.key)}" aria-expanded="${op}" aria-label="길찾기·공유·캘린더 ${op ? '접기' : '펼치기'}">${CHEV}</button>` : '';
+    return `<article class="card${p.closed ? ' closed' : ''}${seen ? ' seen' : ''}${FRESH.has(p.key) ? ' fresh' : ''}${op ? ' open' : ''}${isLive(p) ? ' live' : ''}" data-key="${esc(p.key)}">
       <div class="time">${time}</div>
       <div class="body">
         <div class="tags">${tags.join('')}</div>
         <a class="title" href="${esc(p.url)}" target="_blank" rel="noopener" data-key="${esc(p.key)}">${esc(unent(p.title))}<span class="sr">(새 창)</span></a>
-        <div class="sub"><span>${seen ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${srcName(p)}</b> · ${when}${ago(p.posted)} · 조회 ${p.views ?? 0}</span></div><div class="cacts">${p.closed ? '' : nav}${p.closed ? '' : shr}${ics}</div>${dupHtml}
+        <div class="sub"><span>${seen ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${srcName(p)}</b> · ${when}${ago(p.posted)} · 조회 ${p.views ?? 0}</span></div><div class="cacts">${acts}</div>${dupHtml}
       </div>
-      <button class="star" type="button" data-key="${esc(p.key)}" aria-pressed="${on}" aria-label="${on ? '저장 해제' : '저장'}">${on ? '★' : '☆'}</button>
+      <button class="star" type="button" data-key="${esc(p.key)}" aria-pressed="${on}" aria-label="${on ? '저장 해제' : '저장'}">${on ? '★' : '☆'}</button>${more}
+      <span class="swipe" aria-hidden="true">${on ? '★ 저장<br>풀기' : '★<br>저장'}</span>
     </article>`;
   }
 
@@ -908,16 +947,39 @@ footer>a{padding:8px 0}
     else {
       let cur = null;
       const dayN = {}; for (const g of groups) { const d = g.p.date || ''; dayN[d] = (dayN[d] || 0) + 1; }
+      const days = Object.keys(dayN);
+      if (days.length > 1) html += `<nav class="daystrip" id="dayStrip" aria-label="날짜로 이동">${days.map((d, i) => `<button type="button" data-day="${i}" aria-current="${i === 0}">${esc(!d ? '날짜 미정' : d === TODAY ? '오늘' : d === addDays(TODAY, 1) ? '내일' : `${+d.slice(5, 7)}/${+d.slice(8)} ${WEEK[wdOf(d)]}`)}<small>${dayN[d]}</small></button>`).join('')}</nav>`;
+      let di = -1;
       for (const g of groups) {
         const d = g.p.date || '';
-        if (d !== cur) { html += (cur === null ? '' : '</section>') + `<section class="dayg"><h2 class="dayh"><span class="day"><b>${esc(dayLabel(g.p.date))}</b> <small>${dayN[d]}건</small></span></h2>`; cur = d; }
+        if (d !== cur) { di++; html += (cur === null ? '' : '</section>') + `<section class="dayg" id="day-${di}"><h2 class="dayh"><span class="day"><b>${esc(dayLabel(g.p.date))}</b> <small>${dayN[d]}건</small></span></h2>`; cur = d; }
         html += card(g.p, g.dup);
       }
       if (cur !== null) html += '</section>';
     }
     list.innerHTML = html + unkHtml;
-    bindUnk();
+    list.classList.toggle('has-strip', !!$('dayStrip'));
+    bindUnk(); syncStrip();
   }
+  // ---- 날짜 띠: 누르면 그 날로, 스크롤하면 지금 보는 날짜 표시 ----
+  function syncStrip() {
+    const st = $('dayStrip'); if (!st) return;
+    const top = st.getBoundingClientRect().bottom + 4;
+    let cur = 0;
+    st.querySelectorAll('button').forEach((b, i) => { const sec = $('day-' + i); if (sec && sec.getBoundingClientRect().top <= top) cur = i; });
+    st.querySelectorAll('button').forEach((b, i) => {
+      const on = i === cur; if ((b.getAttribute('aria-current') === 'true') === on) return;
+      b.setAttribute('aria-current', String(on));
+      if (on) { const l = b.offsetLeft - 16; st.scrollTo({ left: Math.max(0, l - (st.clientWidth - b.offsetWidth) / 2), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
+    });
+  }
+  addEventListener('scroll', () => { if (!syncStrip.raf) syncStrip.raf = requestAnimationFrame(() => { syncStrip.raf = 0; syncStrip(); }); }, { passive: true });
+  $('list').addEventListener('click', e => {
+    const b = e.target.closest('#dayStrip button'); if (!b) return;
+    const sec = $('day-' + b.dataset.day); if (!sec) return;
+    sec.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    track('day_jump', { idx: b.dataset.day });
+  });
   const toTop = $('toTop');
   addEventListener('scroll', () => { toTop.hidden = scrollY < innerHeight * 1.5; }, { passive: true });
   toTop.onclick = () => { scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); $('fToggle').focus({ preventScroll: true }); };
@@ -999,7 +1061,14 @@ footer>a{padding:8px 0}
     const cb = e.target.closest('.cafebox a');
     if (cb) { const src = cb.closest('.cafebox').dataset.src; cafeHintDone(src); track('cafe_hint', { step: cb.dataset.act, post_id: cb.dataset.key, cafe: src }); if (cb.dataset.act === 'open') markSeen(cb.dataset.key); setTimeout(render, 300); return; }
     if (a) { markSeen(a.dataset.key); setTimeout(render, 300); const p = byKey(a.dataset.key); track('open_post', { post_id: a.dataset.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); return; }
-    const b = e.target.closest('.star'); if (!b) return;
+    const mo = e.target.closest('.card .more');
+    if (mo) { toggleCard(mo.closest('.card'), 'button'); return; }
+    const b = e.target.closest('.star');
+    if (!b) {
+      const art = e.target.closest('.card');
+      if (art && !e.target.closest('a,button,summary,details,input,label,.navbox,.repbox,.cafebox') && !String(getSelection && getSelection()).trim() && art.querySelector('.more')) toggleCard(art, 'card');
+      return;
+    }
     const k = b.dataset.key;
     saved.has(k) ? saved.delete(k) : saved.add(k);
     store.set('bdr.saved', [...saved]);
@@ -1009,6 +1078,44 @@ footer>a{padding:8px 0}
     const st = saved.has(k) && document.querySelector(`.star[data-key="${CSS.escape(k)}"]`);
     if (st) { shoot(st); st.classList.add('pop'); }
   });
+  function toggleCard(art, via) {
+    const k = art.dataset.key, on = !OPEN.has(k);
+    on ? OPEN.add(k) : OPEN.delete(k);
+    art.classList.toggle('open', on);
+    const mo = art.querySelector('.more');
+    if (mo) { mo.setAttribute('aria-expanded', String(on)); mo.setAttribute('aria-label', `길찾기·공유·캘린더 ${on ? '접기' : '펼치기'}`); }
+    track('card_expand', { open: on ? 'y' : 'n', via });
+  }
+  // 카드를 왼쪽으로 밀어서 저장 (터치만, 오른쪽 밀기는 브라우저 뒤로 가기와 겹쳐서 안 받음)
+  { let g = null, eat = false;
+    const L = $('list');
+    L.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') return;
+      const art = e.target.closest('.card'); if (!art || !art.querySelector('.star')) return;
+      g = { art, x: e.clientX, y: e.clientY, dx: 0, on: false, id: e.pointerId };
+    }, { passive: true });
+    L.addEventListener('pointermove', e => {
+      if (!g || e.pointerId !== g.id) return;
+      const mx = e.clientX - g.x, my = e.clientY - g.y;
+      if (!g.on) {
+        if (Math.abs(my) > 12 && Math.abs(my) > Math.abs(mx)) { g = null; return; }
+        if (mx < -12 && Math.abs(mx) > Math.abs(my) * 1.5) { g.on = true; g.art.classList.add('swiping'); try { g.art.setPointerCapture(e.pointerId); } catch {} }
+        else return;
+      }
+      g.dx = Math.max(-120, Math.min(0, mx));
+      g.art.style.transform = `translateX(${g.dx}px)`;
+    }, { passive: true });
+    const end = () => {
+      if (!g) return; const { art, on, dx } = g; g = null;
+      if (!on) return;
+      art.classList.remove('swiping'); art.classList.add('swipeback'); art.style.transform = '';
+      setTimeout(() => art.classList.remove('swipeback'), 260);
+      if (dx < -72) { track('swipe_save'); art.querySelector('.star').click(); }
+      eat = true; setTimeout(() => { eat = false; }, 80); // 밀고 난 뒤 따라오는 클릭(카드 펼치기·원문 열기)은 무시
+    };
+    L.addEventListener('pointerup', end); L.addEventListener('pointercancel', end);
+    L.addEventListener('click', e => { if (eat) { e.stopPropagation(); e.preventDefault(); } }, true);
+  }
   // 농구공 작은 재미: 저장할 때 공이 별(골대)로 쏙, 로고 공 누르면 통통
   const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   function shoot(star) {
@@ -1041,7 +1148,18 @@ footer>a{padding:8px 0}
     render();
     if (S.soon && S.r1 === '전체') toast('📍 내 근처를 고르면 가까운 곳만 볼 수 있어요');
   };
-  setInterval(() => { if (S.soon && !document.hidden && !document.querySelector('.navbox, .repbox, .cafebox')) render(); }, 60000); // 남은 시간 갱신
+  setInterval(() => { // 남은 시간 갱신: '곧 시작' 필터 중이면 다시 그리고, 아니면 꼬리표만 바꿈
+    if (document.hidden || MY) return;
+    if (S.soon) { if (!document.querySelector('.navbox, .repbox, .cafebox')) render(); return; }
+    document.querySelectorAll('#list .card[data-key]').forEach(art => {
+      const p = byKey(art.dataset.key); if (!p) return;
+      const want = timeTag(p), old = art.querySelector('.tag.soon, .tag.live');
+      if ((old ? old.outerHTML : '') === want) return;
+      if (old) { if (want) old.outerHTML = want; else old.remove(); }
+      else if (want) { const nd = art.querySelector('.tags .newdot'); (nd || art.querySelector('.tags')).insertAdjacentHTML(nd ? 'afterend' : 'afterbegin', want); }
+      art.classList.toggle('live', isLive(p));
+    });
+  }, 60000);
   // 지도 보기 — 동네별 글 수를 동그라미로. Leaflet(cdnjs) + OpenStreetMap 타일, 처음 열 때만 불러옴
   let LMAP = null, LLAYER = null, leafletP = null;
   function loadLeaflet() {
