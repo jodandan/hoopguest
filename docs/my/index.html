@@ -236,6 +236,7 @@ button{font:inherit;color:inherit}
 @keyframes pinin{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
 .leaflet-container{font-family:inherit}
 .favnote{margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);color:var(--text);font-size:var(--fs-sm);line-height:1.5}
+#matchHint .linkbtn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;min-width:32px;padding:0 6px;vertical-align:middle}
 .linkbtn{margin-left:6px;padding:0;border:0;background:none;font-weight:700;color:var(--accent);text-decoration:underline;cursor:pointer}
 .linkbtn.x{float:right;margin-left:10px;text-decoration:none;color:var(--sub)}
 .state{text-align:center;padding:48px 16px;color:var(--sub);background:var(--card);border:1px dashed var(--line2);border-radius:var(--r-lg)}
@@ -364,6 +365,7 @@ footer>a{padding:8px 0}
     <span class="cr"><button class="linkbtn" id="reset" type="button">필터 초기화</button><button class="linkbtn" id="sort" type="button" aria-label="정렬 바꾸기">일정순 ⇅</button><button class="ibtn" id="btnMap" type="button" aria-label="지도로 보기" title="지도로 보기" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>지도</span></button><button class="ibtn" id="btnShare" type="button" aria-label="이 조건 링크 공유" title="이 조건 링크 공유"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span>공유</span></button><button class="ibtn" id="btnPush" type="button" aria-label="새 글 알림" title="새 글 알림" aria-expanded="false" hidden><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg><span>알림</span><i class="dot" hidden></i></button></span>
   </div>
   <p class="favnote" id="favNote" role="status" hidden></p>
+  <p class="favnote" id="matchHint" hidden></p>
   <section class="mapbox" id="mapBox" hidden aria-label="지역별 글 지도"><div id="map"></div><p class="mapnote" id="mapNote"></p></section>
   <main id="list" class="anim" aria-busy="true" tabindex="-1" aria-label="모집 글 목록">
     <!--ssr--><!--/ssr-->
@@ -876,6 +878,7 @@ footer>a{padding:8px 0}
     if (!S.mapPick) store.set('bdr.fav', { r1: S.r1, r2: [...S.r2] });
     if (S.favNote && (S.r1 !== S.favNote.r1 || [...S.r2].join() !== S.favNote.r2)) S.favNote = null;
     renderFavNote();
+    renderMatchHint();
     renderTabs();
     renderFilters();
     if (!$('pushBox').hidden) renderPush();
@@ -1049,6 +1052,23 @@ footer>a{padding:8px 0}
       const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.onload = ok; s.onerror = er; document.head.appendChild(s);
     });
   }
+  // 연습경기 탭: 상대 팀 글 알림을 바로 켤 수 있게 안내 (이미 연습경기 알림을 받거나 닫았으면 안 보임)
+  function renderMatchHint() {
+    const el = $('matchHint'); if (!el) return;
+    const al = store.get('bdr.alert', null), on = !!store.get('bdr.push', null);
+    const covered = on && al && al.filters && (al.filters.boards || []).includes('match');
+    if (S.board !== 'match' || covered || store.get('bdr.matchHint', 0)) { el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = `연습경기 상대를 찾고 있다면, 새 초청 글이 올라올 때 바로 알려드릴게요. <button class="linkbtn" id="mhOn" type="button">알림 받기</button><button class="linkbtn x" id="mhX" type="button" aria-label="안내 닫기">✕</button>`;
+    $('mhOn').onclick = () => {
+      track('alert_preset', { from: 'match', region1: S.r1 });
+      const box = $('pushBox');
+      if (box.hidden) $('btnPush').click(); else renderPush();
+      box.scrollIntoView({ block: 'nearest', behavior: calm() ? 'auto' : 'smooth' });
+      $('pushOn')?.focus({ preventScroll: true });
+    };
+    $('mhX').onclick = () => { store.set('bdr.matchHint', 1); track('alert_preset', { from: 'match', step: 'close' }); el.hidden = true; };
+  }
   function renderFavNote() {
     const el = $('favNote'); if (!el) return;
     if (!S.favNote) { el.hidden = true; return; }
@@ -1178,7 +1198,7 @@ footer>a{padding:8px 0}
       track('push_subscribe', { board: S.board, region1: S.r1, regions: filters.regions.join(',') || '-', slot: filters.slots.join(',') || '-', week: S.week, via: pre ? (opt.silent ? 'account_link' : 'account') : 'filters' });
       if (!opt.silent) toast('알림을 켰어요');
     } catch (e) { if (!opt.silent) toast('알림을 켜지 못했어요. 잠시 후 다시 시도해 주세요'); }
-    renderPush(); renderPushBtn();
+    renderPush(); renderPushBtn(); renderMatchHint();
   }
   async function unsubscribePush() {
     try {
@@ -1186,7 +1206,7 @@ footer>a{padding:8px 0}
       if (sub) { await fetch(PUSH_API + '/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {}); await sub.unsubscribe(); }
     } catch {}
     store.set(PUSH_KEY, null); track('push_unsubscribe');
-    toast('알림을 껐어요'); renderPush(); renderPushBtn();
+    toast('알림을 껐어요'); renderPush(); renderPushBtn(); renderMatchHint();
   }
   function renderPushBtn() {
     const b = $('btnPush'); b.hidden = !PUSH_API;
