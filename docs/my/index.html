@@ -210,6 +210,7 @@ button{font:inherit;color:inherit}
 .card .body{padding-right:22px}
 .card.open .cacts{animation:boxin .2s ease}
 .card .swipe{position:absolute;top:0;bottom:0;left:100%;margin-left:10px;width:96px;border-radius:var(--r-lg);background:var(--hl);color:var(--hl-text);display:flex;align-items:center;justify-content:center;gap:4px;font:700 var(--fs-sm)/1.2 var(--f-body);text-align:center;pointer-events:none}
+.card .swipe{visibility:hidden}.card.swiping .swipe,.card.swipeback .swipe{visibility:visible}
 .card.swiping{transition:none}
 .card.swipeback{transition:transform var(--dur) ease}
 #list{overflow-x:clip}
