@@ -8,7 +8,7 @@ const DOCS = new URL('../docs/', import.meta.url);
 const LASTMOD = new URL('../data/lastmod.json', import.meta.url); // 페이지별 마지막으로 내용이 바뀐 날(사이트맵 lastmod용)
 const HIST = new URL('../data/history.json', import.meta.url); // 지역 페이지 '최근 경향' 통계용 누적 기록(공개 안 됨)
 const GA_ID = 'G-0DWSLR5007';
-const GUIDE_UPDATED = '2026-10-20'; // docs/guide/index.html(손으로 쓰는 이용 가이드)를 고친 날 — 고치면 같이 바꿀 것
+const GUIDE_UPDATED = '2026-10-23'; // docs/guide/index.html(손으로 쓰는 이용 가이드)를 고친 날 — 고치면 같이 바꿀 것
 
 export const R1 = { 서울: 'seoul', 경기: 'gyeonggi', 인천: 'incheon' };
 // [표시명(데이터 region2), 슬러그, 위도, 경도]
@@ -113,6 +113,11 @@ li{border:1px solid var(--line);border-radius:18px;box-shadow:var(--cs,none)}
 .nv a{border:1px solid var(--line);border-radius:999px}
 a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.cta,.b{transition:none}}
+/* 10-23 디자인 QA: 제목 단어 단위 줄바꿈, 누르는 곳 32px 이상 */
+h1{word-break:keep-all;overflow-wrap:anywhere}
+nav.bc a{display:inline-flex;align-items:center;min-height:32px;padding:0 6px}
+li a{display:block;padding:4px 0}
+.trend a,.links a{display:inline-flex;align-items:center;min-height:32px}
 </style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}')}</script>
 </head><body>
@@ -249,6 +254,11 @@ li{border:1px solid var(--line);border-radius:18px;box-shadow:var(--cs,none)}
 .nv a{border:1px solid var(--line);border-radius:999px}
 a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.cta,.b{transition:none}}
+/* 10-23 디자인 QA: 제목 단어 단위 줄바꿈, 누르는 곳 32px 이상 */
+h1{word-break:keep-all;overflow-wrap:anywhere}
+nav.bc a{display:inline-flex;align-items:center;min-height:32px;padding:0 6px}
+li a{display:block;padding:4px 0}
+.trend a,.links a{display:inline-flex;align-items:center;min-height:32px}
 </style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}');gtag('event','shared_post_view',{post_id:'${esc(p.key)}'})}</script>
 </head><body>
