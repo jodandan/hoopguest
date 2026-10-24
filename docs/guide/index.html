@@ -93,10 +93,22 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .toc a{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--text);font-size:14px;text-decoration:none}
 .g .cta{text-decoration:none;color:var(--btn-text);margin-top:12px}
 .g footer a{color:var(--sub)}
+/* 10-25 서브 페이지 머리를 첫 화면과 통일 */
+.hdr{background:var(--hero,#CF3326);color:var(--hero-text,#fff);padding:0;border-bottom:1px solid var(--line)}
+.hdr .w{padding-top:10px;padding-bottom:10px}
+.hdr .brand{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0;color:inherit;text-decoration:none}
+.hdr .brand img{width:30px;height:30px;border-radius:50%;flex:none}
+.hdr .brand b{font:400 23px/1.1 "Black Han Sans","Noto Sans KR",sans-serif;letter-spacing:.01em}
+.hdr .brand i{font:700 11px/1 -apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-style:normal;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.2)}
+.hdr .brand:focus-visible{outline:3px solid var(--hero-text,#fff);outline-offset:2px}
+@media (min-width:720px){.hdr .w{padding-top:14px;padding-bottom:14px}.hdr .brand img{width:36px;height:36px}.hdr .brand b{font-size:28px}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hdr .brand i{background:var(--pill,#262A30);color:var(--accent,#FF8A33)}}
+:root[data-theme="dark"] .hdr .brand i{background:var(--pill,#262A30);color:var(--accent,#FF8A33)}
 </style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=G-0DWSLR5007';document.head.appendChild(s);gtag('js',new Date());gtag('config','G-0DWSLR5007')}</script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" media="print" onload="this.media='all'">
 </head><body>
-<header><div class="w" style="padding-bottom:0"><a href="/">🏀 훕게스트</a></div></header>
+<header class="hdr"><div class="w"><a class="brand" href="/" aria-label="훕게스트 첫 화면"><img src="/ball.svg" alt="" width="30" height="30"><b>훕게스트</b><i>모아보기</i></a></div></header>
 <main class="w g">
 <nav class="bc" aria-label="위치"><a href="/">홈</a> › 이용 가이드</nav>
 <h1>농구 게스트 처음이라면 — 구인 글 찾기부터 매너까지</h1>
