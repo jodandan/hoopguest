@@ -318,3 +318,23 @@ export function postedAt(elapsed, nowMs = Date.now()) {
 }
 
 export const kstYmd = iso => ymd(new Date(Date.parse(iso) + 9 * 3600e3));
+
+// 연습경기 제목에서 초청하는 팀 이름 추출. 확신 없으면 ''(오탐보다 누락이 낫다)
+const TEAM_BAD = /(체육관|체육센터|센터|학교|초등|중학|고등|운동장|공원|경기장|짐|코트|구장|역|근처|인근|시민|구민|종합|^[가-힣]{1,4}(고|중|초)$|^\d|\d시|\d분|^(오늘|금일|내일|저희|우리|한팀|한|팀|초청|초청팀|교류전|친선|친선팀|연습|연습경기|연습게임|상대|상대팀|원정|원정팀|도봉|노원|서울|경기|인천|부산|대구|대전|광주|울산|세종|강원|제주)$|[구군시동]$|^[월화수목금토일]요?일?$)/;
+export function teamOf(title) {
+  const t = normalize(title).replace(/[\[\(][^\]\)]*[\]\)]/g, ' ').replace(/\s+/g, ' ');
+  const TOK = '([^\\s\\[\\]()<>,!~]{2,12})';
+  const pats = [
+    new RegExp('(?:^|\\s)팀\\s?' + TOK + '(?:에서|이\\s|에\\s)'),
+    new RegExp('(?:^|\\s)' + TOK + '팀\\s?에서'),
+    new RegExp('(?:^|\\s)' + TOK + '팀\\s(?:교류전|초청|연습)'),
+    new RegExp('(?:^|\\s)' + TOK + '에서\\s(?:한\\s?팀|팀|초청|교류전|원정|상대|연습)'),
+  ];
+  for (const re of pats) {
+    const m = t.match(re);
+    if (!m) continue;
+    const n = m[1].replace(/^(팀|에서)/, '');
+    if (n.length >= 2 && n.length <= 12 && !TEAM_BAD.test(n)) return n;
+  }
+  return '';
+}

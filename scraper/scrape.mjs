@@ -1,7 +1,7 @@
 // BDR 동아리농구방 게시판 목록(제목) 수집 → docs/data.json
 // 게스트 구인 · 픽업게임 · 연습경기. 본문·작성자·연락처는 수집하지 않음. Node 20+ (내장 fetch)
 import { readFile, writeFile } from 'node:fs/promises';
-import { parsePost, postedAt, kstYmd } from './parser.mjs';
+import { parsePost, postedAt, kstYmd, teamOf } from './parser.mjs';
 import { buildPages, setPlaceIds } from './pages.mjs';
 import { verifyPlaces } from './places.mjs';
 
@@ -169,6 +169,7 @@ async function main() {
 
   const yesterday = kstYmd(new Date(now - 864e5).toISOString());
   const posts = [...byKey.values()]
+    .map(p => { const { team: _t, ...r } = p; const team = p.board === 'match' ? teamOf(p.title) : ''; return team ? { ...r, team } : r; })
     .filter(p => p.date ? p.date >= yesterday : (now - Date.parse(p.posted)) / 864e5 <= 3)
     .sort((a, b) => Date.parse(b.posted) - Date.parse(a.posted) || b.id - a.id);
 
