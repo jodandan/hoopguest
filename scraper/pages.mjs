@@ -396,6 +396,9 @@ export async function buildPages(data) {
   const live = dedupe(data.posts.filter(p => !p.closed && (p.date ? p.date >= today : (Date.parse(updated) - Date.parse(p.posted)) / 864e5 <= 2)))
     .sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999') || (a.start || '99').localeCompare(b.start || '99'));
   const ymdK = today.replace(/-/g, '.');
+  // 검색 결과 설명 앞머리: '오늘 n건 · 내일 m건' (클릭률용 — 0이면 뺌)
+  const tmr = new Date(Date.parse(today + 'T00:00:00Z') + 864e5).toISOString().slice(0, 10);
+  const dayLead = ps => { const a = ps.filter(p => p.date === today).length, b = ps.filter(p => p.date === tmr).length; const t = [a && `오늘 ${a}건`, b && `내일 ${b}건`].filter(Boolean).join(' · '); return t ? t + ' — ' : ''; };
   const hist = await updateHistory(data.posts, today);
   const out = []; // [path, html]
   const all = Object.entries(DISTRICTS).flatMap(([r1, ds]) => ds.map(d => [r1, ...d]));
@@ -407,8 +410,8 @@ export async function buildPages(data) {
     const byD = DISTRICTS[r1].map(([n, s]) => [`${n === '경기광주' ? '광주' : n} (${ps.filter(p => p.region2 === n).length})`, `/r/${s1}/${s}/`]);
     out.push([`/r/${s1}/`, page({
       path: `/r/${s1}/`, today, updated,
-      title: `${r1} 농구 게스트 모집 · 픽업게임 · 교류전 | 훕게스트`,
-      desc: `${r1} 지역 농구 게스트 구인, 픽업게임, 연습경기·교류전 모집 글 ${ps.length}건을 날짜·시간순으로 모았어요. ${ymdK} 기준, 30분마다 갱신.`,
+      title: `${r1} 농구 게스트 구인·구함 · 픽업게임 · 교류전 | 훕게스트`,
+      desc: `${dayLead(ps)}${r1} 농구 게스트 구인·구함, 픽업게임, 연습경기·교류전 모집 글 ${ps.length}건을 동네·날짜·시간대별로 정리했어요. 농구 카페 글을 30분마다 모아 보여줘요.`,
       h1: `${r1} 농구 게스트 · 픽업게임 · 교류전`,
       intro: `${r1} 지역에서 지금 올라온 농구 게스트 구함, 픽업게임, 연습경기 모집 글이에요. 제목을 누르면 카페 원문으로 이동해요.`,
       posts: ps, crumbs: [['홈', '/'], [`${r1}`, `/r/${s1}/`]],
@@ -432,8 +435,8 @@ export async function buildPages(data) {
       const gymLinks = gyms.filter(g => g.r1 === r1 && g.r2 === n).map(g => [g.name, g.path]);
       out.push([`/r/${s1}/${s}/`, page({ robots: thin ? 'noindex,follow' : '',
         path: `/r/${s1}/${s}/`, today, updated,
-        title: `${nm} 농구 게스트 모집 · 픽업게임 · 교류전 | 훕게스트`,
-        desc: `${nm} 농구 게스트 구함·픽업게임·교류전 모집 글을 날짜·시간순으로 모아봐요.${mine.length ? ` 지금 ${mine.length}건` : ''}${mine.length < 3 && nearby.length ? `${mine.length ? ',' : ' 지금'} 근처 지역 ${Math.min(nearby.length, 10)}건` : ''}. 30분마다 갱신.`,
+        title: `${nm} 농구 게스트 구인·구함 · 픽업게임 · 교류전 | 훕게스트`,
+        desc: `${dayLead(mine)}${nm} 농구 게스트 구인·구함·픽업게임·교류전 모집 글을 날짜·시간순으로 모아봐요.${mine.length ? ` 지금 ${mine.length}건` : ''}${mine.length < 3 && nearby.length ? `${mine.length ? ',' : ' 지금'} 근처 지역 ${Math.min(nearby.length, 10)}건` : ''}. 30분마다 갱신.`,
         h1: `${nm} 농구 게스트 · 픽업게임`,
         intro: mine.length >= 3 ? `${nm}에서 지금 모집 중인 농구 게스트·픽업게임·교류전 글 ${mine.length}건이에요.` : mine.length ? `${nm} 글 ${mine.length}건과 가까운 지역 글을 함께 보여 드려요.` : `${nm}에는 지금 모집 글이 없어요. 가까운 지역 글을 대신 보여 드려요.`,
         posts: mine.length >= 3 ? mine : [...mine, ...nearby.slice(0, 10).sort((x, y) => (x.date || '9999').localeCompare(y.date || '9999') || (x.start || '99').localeCompare(y.start || '99'))], // 근처 글은 10건까지만(이웃 지역 페이지끼리 내용이 겹치지 않게)
