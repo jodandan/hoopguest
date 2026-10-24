@@ -6,7 +6,7 @@
 <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:site_name" content="훕게스트">
 <meta property="og:title" content="🏀 10/24 (토) 19:00~21:30 · 서울 강북 연습경기·교류전 모집"><meta property="og:description" content="[강북구] 내일)) 10/24(토) 19:00~21:30 친선팀 초청합니다."><meta property="og:url" content="https://hoopguest.kro.kr/p/MptT-361493/"><meta property="og:image" content="https://hoopguest.kro.kr/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml">
+<meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" media="print" onload="this.media='all'">
 <script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 :root{--bg:#FFFDF6;--text:#0E0E10;--sub:#4E4E55;--line:#0E0E10;--card:#fff}
@@ -61,10 +61,28 @@ h1{word-break:keep-all;overflow-wrap:anywhere}
 nav.bc a{display:inline-flex;align-items:center;justify-content:center;min-height:32px;min-width:32px;padding:0 6px;box-sizing:border-box}
 li a{display:block;padding:4px 0}
 .trend a,.links a{display:inline-flex;align-items:center;min-height:32px}
+/* 10-25 서브 페이지 머리·카드를 첫 화면과 통일 */
+.hdr{background:var(--hero,#CF3326);color:var(--hero-text,#fff);padding:0;border-bottom:1px solid var(--line)}
+.hdr .w{padding-top:10px;padding-bottom:10px}
+.hdr .brand{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0;color:inherit;text-decoration:none}
+.hdr .brand img{width:30px;height:30px;border-radius:50%;flex:none}
+.hdr .brand b{font:400 23px/1.1 "Black Han Sans","Noto Sans KR",sans-serif;letter-spacing:.01em}
+.hdr .brand i{font:700 11px/1 -apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;font-style:normal;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.2)}
+.hdr .brand:focus-visible{outline:3px solid var(--hero-text,#fff);outline-offset:2px}
+@media (min-width:720px){.hdr .w{padding-top:14px;padding-bottom:14px}.hdr .brand img{width:36px;height:36px}.hdr .brand b{font-size:28px}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hdr .brand i{background:var(--pill,#262A30);color:var(--accent,#FF8A33)}}
+:root[data-theme="dark"] .hdr .brand i{background:var(--pill,#262A30);color:var(--accent,#FF8A33)}
+li .t{font:400 19px/1.15 "Black Han Sans","Noto Sans KR",sans-serif;letter-spacing:.01em;padding-top:2px}
+li{border-color:var(--card-line,#EFEAE2);border-radius:20px;padding:12px 14px}
+.srcm{font-weight:700}.srcm::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:4px;vertical-align:1px}
+.srcm.nv{color:#157A34}.srcm.dm{color:#B4231A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) li .t{color:var(--btn)}:root:not([data-theme="light"]) .srcm.nv{color:#5FD38A}:root:not([data-theme="light"]) .srcm.dm{color:#FF8A7E}:root:not([data-theme="light"]) li{border-color:var(--line)}}
+:root[data-theme="dark"] li .t{color:var(--btn)}:root[data-theme="dark"] .srcm.nv{color:#5FD38A}:root[data-theme="dark"] .srcm.dm{color:#FF8A7E}:root[data-theme="dark"] li{border-color:var(--line)}
+.c .when{font:400 24px/1.25 "Black Han Sans","Noto Sans KR",sans-serif;letter-spacing:.01em}
 </style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=G-0DWSLR5007';document.head.appendChild(s);gtag('js',new Date());gtag('config','G-0DWSLR5007');gtag('event','shared_post_view',{post_id:'MptT:361493'})}</script>
 </head><body>
-<header><div class="w" style="padding-bottom:0"><a href="/">🏀 훕게스트</a></div></header>
+<header class="hdr"><div class="w"><a class="brand" href="/" aria-label="훕게스트 첫 화면"><img src="/ball.svg" alt="" width="30" height="30"><b>훕게스트</b><i>모아보기</i></a></div></header>
 <main class="w">
 <div class="c">
 <p class="x">지난 일정이에요. 아래에서 다른 글을 찾아보세요.</p><p class="x" id="over" hidden></p><h1 class="when">10/24 (토) 19:00~21:30</h1>
