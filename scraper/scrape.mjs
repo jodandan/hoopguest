@@ -181,9 +181,9 @@ async function main() {
   });
 
   const added = dedup.filter(p => !prevKeys.has(p.key)).map(p => p.key);
-  // 조회수만 달라진 경우엔 저장·페이지 생성·커밋을 건너뛴다(잦은 수집이 GitHub Pages 빌드를 낭비하지 않도록). 단 3시간마다는 갱신
+  // 조회수만 달라진 경우엔 저장·페이지 생성·커밋을 건너뛴다(잦은 수집이 GitHub Pages 빌드를 낭비하지 않도록). 단 30분마다는 갱신('최근 업데이트' 표시가 낡지 않게)
   const sig = ps => JSON.stringify(ps.map(({ views, ...r }) => r));
-  if (!added.length && prev.today === today && prev.updated && now - Date.parse(prev.updated) < 3 * 36e5 && sig(prev.posts) === sig(dedup)) {
+  if (!added.length && prev.today === today && prev.updated && now - Date.parse(prev.updated) < 30 * 6e4 && sig(prev.posts) === sig(dedup)) {
     console.log(log.join(' / '), '| 변경 없음 — 저장 생략');
     return;
   }
