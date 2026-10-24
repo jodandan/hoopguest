@@ -176,7 +176,7 @@ export default {
     ctx.waitUntil((async () => {
       const r = await checkAndPush(env, now);
       console.log('push', JSON.stringify(r));
-      if (min % 30 < 10) console.log('dispatch', await dispatchScrape(env));
+      console.log('dispatch', await dispatchScrape(env));
     })());
   },
 };

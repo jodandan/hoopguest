@@ -7,12 +7,13 @@ import { verifyPlaces } from './places.mjs';
 
 const GRPID = 'IGaj';           // dongarry 카페 내부 ID
 export const BOARDS = [
-  { fld: 'Dilr', key: 'guest', name: '게스트 구인', pages: 8 },
+  { fld: 'Dilr', key: 'guest', name: '게스트 구인', pages: 10 },
   { fld: 'IVHA', key: 'pickup', name: '픽업게임', pages: 2 },
   { fld: 'MptT', key: 'match', name: '연습경기', pages: 3 },
 ];
 const PAGE_SIZE = 50;
 const DELAY_MS = 1500;          // 요청 간격
+const RESCAN_DAYS = 6;          // 마감 표시는 글 올린 뒤 며칠 지나 붙기도 한다. 모집 중 글(최대 약 5.7일 전 게시)을 덮도록 6일
 const OUT = new URL('../docs/data.json', import.meta.url);
 const API = 'https://m.cafe.daum.net/api/v1/common-articles';
 const UA = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Mobile Safari/537.36';
@@ -21,7 +22,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // 네이버 카페 NSB 농심카페 '수도권 게스트' 게시판 (운영진 허락: 개인정보 비노출 조건)
 // 게스트·픽업·연습경기가 한 게시판에 섞여 있어 제목으로 분류. 작성자 정보는 저장하지 않음
-export const NAVER = { cafeId: 10586238, menuId: 34, pages: 3, name: '농심카페' };
+export const NAVER = { cafeId: 10586238, menuId: 34, pages: 5, name: '농심카페' };
 const NAVER_API = `https://apis.naver.com/cafe-web/cafe-boardlist-api/v1/cafes/${NAVER.cafeId}/menus/${NAVER.menuId}/articles`;
 
 // 제목 속 연락처 가리기 (전화번호·카톡/오픈채팅 ID)
@@ -60,7 +61,7 @@ async function fetchNaver(now) {
         ...parsePost(title, head, kstYmd(posted)),
       });
     }
-    if ((now - list.at(-1).writeDateTimestamp) / 864e5 > 3) break;
+    if ((now - list.at(-1).writeDateTimestamp) / 864e5 > RESCAN_DAYS) break;
     await sleep(DELAY_MS);
   }
   return out;
@@ -96,7 +97,7 @@ async function fetchBoard(b, now) {
     raw.push(...arts);
     depth = arts.at(-1).bbsDepth;
     const last = postedAt(arts.at(-1).articleElapsedTime, now);
-    if ((now - Date.parse(last)) / 864e5 > 3) break; // 게시 3일 지난 글이 나오면 중단
+    if ((now - Date.parse(last)) / 864e5 > RESCAN_DAYS) break; // 게시 RESCAN_DAYS일 지난 글이 나오면 중단 (모집 중 글의 제목에 뒤늦게 붙는 마감 감지)
     await sleep(DELAY_MS);
   }
   return raw.filter(a => !a.isNotice && !a.hasParentArticle).map(a => {
@@ -180,6 +181,12 @@ async function main() {
   });
 
   const added = dedup.filter(p => !prevKeys.has(p.key)).map(p => p.key);
+  // 조회수만 달라진 경우엔 저장·페이지 생성·커밋을 건너뛴다(잦은 수집이 GitHub Pages 빌드를 낭비하지 않도록). 단 3시간마다는 갱신
+  const sig = ps => JSON.stringify(ps.map(({ views, ...r }) => r));
+  if (!added.length && prev.today === today && prev.updated && now - Date.parse(prev.updated) < 3 * 36e5 && sig(prev.posts) === sig(dedup)) {
+    console.log(log.join(' / '), '| 변경 없음 — 저장 생략');
+    return;
+  }
   const out = {
     updated: new Date(now).toISOString(), today,
     boards: BOARDS.map(({ fld, key, name }) => ({ fld, key, name, url: `https://m.cafe.daum.net/dongarry/${fld}` })),
