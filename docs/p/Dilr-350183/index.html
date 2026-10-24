@@ -56,6 +56,11 @@ li{border:1px solid var(--line);border-radius:18px;box-shadow:var(--cs,none)}
 .nv a{border:1px solid var(--line);border-radius:999px}
 a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.cta,.b{transition:none}}
+/* 10-23 디자인 QA: 제목 단어 단위 줄바꿈, 누르는 곳 32px 이상 */
+h1{word-break:keep-all;overflow-wrap:anywhere}
+nav.bc a{display:inline-flex;align-items:center;min-height:32px;padding:0 6px}
+li a{display:block;padding:4px 0}
+.trend a,.links a{display:inline-flex;align-items:center;min-height:32px}
 </style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=G-0DWSLR5007';document.head.appendChild(s);gtag('js',new Date());gtag('config','G-0DWSLR5007');gtag('event','shared_post_view',{post_id:'Dilr:350183'})}</script>
 </head><body>
