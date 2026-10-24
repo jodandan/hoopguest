@@ -228,7 +228,7 @@ function postPage(p, today) {
 :root{--bg:#FFFDF6;--text:#0E0E10;--sub:#4E4E55;--line:#0E0E10;--card:#fff}
 @media (prefers-color-scheme:dark){:root{--bg:#121214;--text:#F4F1E8;--sub:#B4B0A8;--line:#F4F1E8;--card:#1C1C20}}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 "Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
-.w{max-width:560px;margin:0 auto;padding:0 16px 40px}
+.w{max-width:720px;margin:0 auto;padding:0 16px 40px} /* 10-25: 모든 서브 페이지 본문·머리 폭 720px로 통일(로고와 본문 왼쪽 선 맞춤) */
 header{background:#E0201B;color:#fff;padding:16px 0;border-bottom:3px solid #0E0E10}
 header a{color:#fff;font-weight:700;text-decoration:none;display:inline-block;padding:4px 0}
 .c{margin:20px 0 14px;background:var(--card);border:3px solid var(--line);box-shadow:5px 5px 0 var(--line);padding:16px}
