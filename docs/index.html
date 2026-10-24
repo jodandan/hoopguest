@@ -649,7 +649,7 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
     if (st.slot.size && !st.slot.has(p.slot) && !(p.amb && (st.slot.has('오전') || st.slot.has('저녁')))) return false; // 오전/저녁 미표기 글은 둘 다에 포함
     if (st.soon && !startsSoon(p)) return false;
     if (st.tags && st.tags.size) { for (const t of st.tags) if (!(p.tags || []).includes(t)) return false; }
-    if (q && !(unent(p.title) + (p.region1 || '') + (p.region2 || '')).replace(/\s+/g, '').toLowerCase().includes(q)) return false;
+    if (q && !(unent(p.title) + (p.team || '') + (p.region1 || '') + (p.region2 || '')).replace(/\s+/g, '').toLowerCase().includes(q)) return false;
     return true;
   }
   function sortRows(rows) {
@@ -749,6 +749,7 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
     if (isNew(p)) tags.push('<span class="newdot" title="새 글"><span class="sr">새 글</span></span>');
     { const tt = timeTag(p); if (tt) tags.push(tt); }
     if (p.region1) tags.push(`<span class="tag">${esc(regionLabel(p))}</span>`);
+    if (p.board === 'match') { if (p.team) tags.push(`<span class="tag c">팀 ${esc(p.team)}</span>`); const gp = placeFor(p); if (gp) tags.push(`<span class="tag g">${esc(gp)}</span>`); }
     if (S.r1 === NEARBY && S.home && GEO[p.region2]) { const d = km(S.home, p.region2); tags.push(`<span class="tag g">${d < 2 ? '내 동네' : '약 ' + Math.round(d) + 'km'}</span>`); }
     if (p.free && !(p.tags || []).includes('무료')) tags.push('<span class="tag g">무료</span>');
     for (const t of p.tags || []) tags.push(`<span class="tag c">${esc(t)}</span>`);
