@@ -8,7 +8,7 @@ const DOCS = new URL('../docs/', import.meta.url);
 const LASTMOD = new URL('../data/lastmod.json', import.meta.url); // 페이지별 마지막으로 내용이 바뀐 날(사이트맵 lastmod용)
 const HIST = new URL('../data/history.json', import.meta.url); // 지역 페이지 '최근 경향' 통계용 누적 기록(공개 안 됨)
 const GA_ID = 'G-0DWSLR5007';
-const GUIDE_UPDATED = '2026-10-23'; // docs/guide/index.html(손으로 쓰는 이용 가이드)를 고친 날 — 고치면 같이 바꿀 것
+const GUIDE_UPDATED = '2026-10-24'; // docs/guide/index.html(손으로 쓰는 이용 가이드)를 고친 날 — 고치면 같이 바꿀 것
 
 export const R1 = { 서울: 'seoul', 경기: 'gyeonggi', 인천: 'incheon' };
 // [표시명(데이터 region2), 슬러그, 위도, 경도]
@@ -115,7 +115,7 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.cta,.b{transition:none}}
 /* 10-23 디자인 QA: 제목 단어 단위 줄바꿈, 누르는 곳 32px 이상 */
 h1{word-break:keep-all;overflow-wrap:anywhere}
-nav.bc a{display:inline-flex;align-items:center;min-height:32px;padding:0 6px}
+nav.bc a{display:inline-flex;align-items:center;justify-content:center;min-height:32px;min-width:32px;padding:0 6px;box-sizing:border-box}
 li a{display:block;padding:4px 0}
 .trend a,.links a{display:inline-flex;align-items:center;min-height:32px}
 </style>
@@ -256,7 +256,7 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.cta,.b{transition:none}}
 /* 10-23 디자인 QA: 제목 단어 단위 줄바꿈, 누르는 곳 32px 이상 */
 h1{word-break:keep-all;overflow-wrap:anywhere}
-nav.bc a{display:inline-flex;align-items:center;min-height:32px;padding:0 6px}
+nav.bc a{display:inline-flex;align-items:center;justify-content:center;min-height:32px;min-width:32px;padding:0 6px;box-sizing:border-box}
 li a{display:block;padding:4px 0}
 .trend a,.links a{display:inline-flex;align-items:center;min-height:32px}
 </style>
@@ -336,19 +336,40 @@ function trendHtml(rows, name, today, since, gyms = [], noVenue = false) {
   for (const r of rows) { const v = vn(r.v); const g = (r.id && gq.get(r.id)) || (v && gv.get(v)); const k = g ? g.path : v; if (!k) continue; const e = vc.get(k) || { n: 0, g, v }; e.n++; vc.set(k, e); }
   const vs = [...vc.values()].sort((a, b) => b.n - a.n).slice(0, 5);
   const vHtml = vs.length && !noVenue ? `<p><b>자주 열리는 장소</b> ${vs.map(e => e.g ? `<a href="${e.g.path}">${esc(e.g.name)}</a> ${e.n}건` : `${esc(e.v)} ${e.n}건`).join(' · ')}</p>` : '';
+  // 10-24 고유 본문 보강: 평일·주말 시간대, 가장 많은 요일+시간대 조합, 최근 7일 변화, 글 종류별 안내 (그 지역 숫자로 만든 문장)
+  const isWe = r => { const w = new Date(r.d + 'T00:00:00Z').getUTCDay(); return w === 0 || w === 6; };
+  const modeSl = rs => (top(rs.map(r => r.s).filter(Boolean), 1)[0] || [])[0];
+  const wdS = modeSl(rows.filter(r => !isWe(r))), weS = modeSl(rows.filter(isWe));
+  const combo = top(rows.filter(r => r.s).map(r => `${WEEK[new Date(r.d + 'T00:00:00Z').getUTCDay()]}요일 ${SLOT_WORD[r.s] || r.s}`), 1)[0];
+  const t7 = new Date(Date.parse(today) - 6 * 864e5).toISOString().slice(0, 10), p7 = new Date(Date.parse(today) - 13 * 864e5).toISOString().slice(0, 10);
+  const n7 = rows.filter(r => r.d >= t7 && r.d <= today).length, n7p = rows.filter(r => r.d >= p7 && r.d < t7).length;
+  const nb = k => rows.filter(r => r.b === k).length;
+  const tips = [];
+  if (wdS && weS) tips.push(wdS === weS ? `${esc(name)}에서는 평일·주말 모두 ${esc(SLOT_WORD[wdS] || wdS)} 모임이 가장 많아요.` : `${esc(name)}에서는 평일엔 ${esc(SLOT_WORD[wdS] || wdS)}, 주말엔 ${esc(SLOT_WORD[weS] || weS)} 모임이 가장 많아요.`);
+  if (combo && combo[1] >= 2) tips.push(`요일과 시간대를 합쳐 보면 ${esc(combo[0])} 글이 ${combo[1]}건으로 가장 많았어요.`);
+  if (days >= 14) tips.push(`최근 7일 동안 올라온 글은 ${n7}건으로, 그 전 7일(${n7p}건)보다 ${n7 > n7p ? '늘었어요' : n7 < n7p ? '줄었어요' : '비슷해요'}.`);
+  if (nb('guest')) tips.push(`게스트 모집이 ${nb('guest')}건이라, 팀 없이 혼자 뛰고 싶다면 ${esc(name)} 게스트 글부터 보는 게 빨라요.`);
+  if (nb('match')) tips.push(`팀 단위로 상대를 찾는다면 연습경기·교류전 글 ${nb('match')}건을 확인해 보세요.`);
+  if (nb('pickup')) tips.push(`팀 없이 모여 편을 나누는 픽업게임 글도 ${nb('pickup')}건 있었어요.`);
+  const tHtml = tips.length ? `<p>${tips.join(' ')}</p>` : '';
   return `<section class="trend"><h2>${esc(name)} 농구 모집 경향</h2><p>${span} 기준 ${esc(name)} 농구 모집 글은 ${rows.length}건(${esc(kinds)})이에요.${wd.length ? ` 요일은 ${esc(iga(wd.join('·')))} 가장 많았고` : ''}${sl.length ? `${wd.length ? ',' : ''} 시간대는 ${esc(iga(sl[0]))} 가장 많았어요.` : wd.length ? '요.' : ''} 주말(토·일) 글은 ${weekend}건으로 전체의 ${Math.round(weekend / rows.length * 100)}%예요.</p>
-<p><b>요일별</b> ${byWd.map(([w, n]) => `${w} ${n}`).join(' · ')}${bySl.length ? `<br><b>시간대별</b> ${bySl.map(([s, n]) => `${s} ${n}건`).join(' · ')}` : ''}</p>${vHtml}</section>`;
+${tHtml}<p><b>요일별</b> ${byWd.map(([w, n]) => `${w} ${n}`).join(' · ')}${bySl.length ? `<br><b>시간대별</b> ${bySl.map(([s, n]) => `${s} ${n}건`).join(' · ')}` : ''}</p>${vHtml}</section>`;
 }
 // 첫 화면(docs/index.html)에 오늘·내일 글 목록을 미리 심어 둠 — 검색 로봇이 스크립트 없이도 내용을 읽도록
-function ssrList(live, today) {
+function ssrList(live, today, gyms = []) {
   const rows = live.filter(p => p.date && p.date >= today).slice(0, 80);
-  if (!rows.length) return '<p class="ssr-empty">지금은 모집 글이 없어요.</p>';
+  const gl = gyms.filter(g => !gymThin(g)).slice(0, 12);
+  const tail = `<section class="ssr"><h2>농구 게스트 처음이라면</h2><p><a href="/guide/">농구 게스트 구인 글 찾는 법 · 비용 · 매너 정리</a></p>${gl.length ? `<h2>자주 열리는 체육관</h2><p>${gl.map(g => `<a href="${g.path}">${esc(g.name)}</a>`).join(' · ')}</p>` : ''}</section>`;
+  if (!rows.length) return '<p class="ssr-empty">지금은 모집 글이 없어요.</p>' + tail;
   const groups = new Map();
   for (const p of rows) { if (!groups.has(p.date)) groups.set(p.date, []); groups.get(p.date).push(p); }
   const r2url = p => { const s1 = R1[p.region1]; const d = s1 && (DISTRICTS[p.region1] || []).find(x => x[0] === p.region2); return d ? `/r/${s1}/${d[1]}/` : s1 ? `/r/${s1}/` : ''; };
-  return [...groups].map(([d, ps]) => `<section class="ssr"><h2>${esc(dayLabel(d, '1970-01-01'))} 수도권 농구 게스트·픽업 모집 ${ps.length}건</h2><ul>${ps.map(p => { const u = r2url(p); const w = where(p); return `<li><b>${esc(p.start || p.slot || '시간 미정')}</b> ${w ? (u ? `<a href="${u}">${esc(w)}</a>` : esc(w)) : ''} ${esc(BOARD_NAME[p.board] || '게스트')} · <a href="${esc(p.url)}" rel="nofollow noopener" target="_blank">${esc(unent(p.title))}</a></li>`; }).join('')}</ul></section>`).join('');
+  return [...groups].map(([d, ps]) => `<section class="ssr"><h2>${esc(dayLabel(d, '1970-01-01'))} 수도권 농구 게스트·픽업 모집 ${ps.length}건</h2><ul>${ps.map(p => { const u = r2url(p); const w = where(p); return `<li><b>${esc(p.start || p.slot || '시간 미정')}</b> ${w ? (u ? `<a href="${u}">${esc(w)}</a>` : esc(w)) : ''} ${esc(BOARD_NAME[p.board] || '게스트')} · <a href="${esc(p.url)}" rel="nofollow noopener" target="_blank">${esc(unent(p.title))}</a></li>`; }).join('')}</ul></section>`).join('') + tail;
 }
 const GYM_MIN = 5; // 체육관 페이지를 만드는 최소 글 수(최근 28일) — 얇은 페이지 방지
+const spanWord = (today, since) => { const d = Math.max(1, Math.min(28, Math.round((Date.parse(today) - Date.parse(since || today)) / 864e5) + 1)); return d >= 7 ? `최근 ${d}일` : '최근'; };
+// 검색 수요가 거의 없는 학교 체육관, 동네를 정하지 못한 체육관은 검색 노출 안 함(페이지는 유지) — 10-24
+const gymThin = g => !g.r2 || /(초등학교|중학교|고등학교|초|중|고|여중|여고)$/.test(g.name.replace(/\s/g, ''));
 const R_NAMES = new Set(['서울', '인천', '경기', ...Object.values(DISTRICTS).flat().map(d => d[0])]);
 // 기록(hist)의 카카오 장소 ID로 체육관 묶기. 이름은 가장 많이 쓴 검색어에서 앞의 지역명을 뺀 것
 function gymList(hist, live) {
@@ -391,7 +412,7 @@ export async function buildPages(data) {
       h1: `${r1} 농구 게스트 · 픽업게임 · 교류전`,
       intro: `${r1} 지역에서 지금 올라온 농구 게스트 구함, 픽업게임, 연습경기 모집 글이에요. 제목을 누르면 카페 원문으로 이동해요.`,
       posts: ps, crumbs: [['홈', '/'], [`${r1}`, `/r/${s1}/`]],
-      links: [[`${r1} 동네별`, byD], ['다른 지역', r1Links.filter(([, u]) => u !== `/r/${s1}/`)]],
+      links: [[`${r1} 동네별`, byD], ...(gyms.some(g => g.r1 === r1 && !gymThin(g)) ? [[`${r1} 자주 열리는 체육관`, gyms.filter(g => g.r1 === r1 && !gymThin(g)).slice(0, 20).map(g => [g.name, g.path])]] : []), ['다른 지역', r1Links.filter(([, u]) => u !== `/r/${s1}/`)]],
       cta: `/?r=${encodeURIComponent(r1)}`,
       trend: trendHtml(hist.filter(h => h.r1 === r1), r1, today, hist.since, gyms),
     })]);
@@ -429,12 +450,13 @@ export async function buildPages(data) {
     const mine = live.filter(p => g.qs.has(placeOf(unent(p.title), p.region2) || ''));
     const others = gyms.filter(x => x !== g && x.r1 === g.r1 && x.r2 === g.r2).map(x => [x.name, x.path]);
     const reg = dUrl(g.r1, g.r2);
-    out.push([g.path, page({
+    const gThin = gymThin(g);
+    out.push([g.path, page({ robots: gThin ? 'noindex,follow' : '',
       path: g.path, today, updated,
       title: `${g.name} 농구 게스트 · 픽업게임 (${area}) | 훕게스트`,
-      desc: `${area} ${g.name}에서 열리는 농구 게스트 구함·픽업게임·교류전 모집 글을 모아봐요. 최근 28일 ${g.rows.length}건${mine.length ? `, 지금 ${mine.length}건 모집 중` : ''}. 30분마다 갱신.`,
+      desc: `${area} ${g.name}에서 열리는 농구 게스트 구함·픽업게임·교류전 모집 글을 모아봐요. ${spanWord(today, hist.since)} ${g.rows.length}건${mine.length ? `, 지금 ${mine.length}건 모집 중` : ''}. 30분마다 갱신.`,
       h1: `${g.name} 농구 게스트 · 픽업게임`,
-      intro: `${area} ${g.name}에서 열리는 농구 게스트·픽업게임·교류전 모집 글이에요. 최근 28일 동안 ${g.rows.length}건이 올라왔어요.`,
+      intro: `${area} ${g.name}에서 열리는 농구 게스트·픽업게임·교류전 모집 글이에요. ${spanWord(today, hist.since)} 동안 ${g.rows.length}건이 올라왔어요.`,
       posts: mine,
       empty: `<p class="empty">지금 ${esc(g.name)} 모집 글은 없어요. <a href="${reg}">${esc(area)} 전체 모집 글</a>을 확인해 보세요.</p>`,
       extra: `<div class="mp"><a href="https://map.kakao.com/link/to/${g.id}" target="_blank" rel="noopener">카카오맵 길찾기</a><a href="https://map.naver.com/p/search/${encodeURIComponent(g.q)}" target="_blank" rel="noopener">네이버 지도</a></div>`,
@@ -443,7 +465,7 @@ export async function buildPages(data) {
       links: [...(others.length && g.r1 ? [[`${area} 다른 체육관`, others]] : []), ...(R1[g.r1] ? [[`${area} 농구 게스트`, [[`${area} 전체 모집 글`, reg]]]] : []), ['광역 지역', r1Links]],
       cta: g.r2 ? `/?r=${encodeURIComponent('내 근처')}&h=${encodeURIComponent(g.r2)}&km=10` : g.r1 ? `/?r=${encodeURIComponent(g.r1)}` : '/', home: g.r2,
       trend: trendHtml(g.rows, g.name, today, hist.since, [], true),
-    })]);
+    }), gThin]);
   }
   await rm(new URL('r/', DOCS), { recursive: true, force: true });
   await rm(new URL('g/', DOCS), { recursive: true, force: true });
@@ -487,7 +509,7 @@ export async function buildPages(data) {
     const idxUrl = new URL('index.html', DOCS);
     const idx = await readFile(idxUrl, 'utf8');
     const a = idx.indexOf('<!--ssr-->'), b = idx.indexOf('<!--/ssr-->');
-    if (a > 0 && b > a) await writeFile(idxUrl, idx.slice(0, a + 10) + ssrList(live, today) + idx.slice(b));
+    if (a > 0 && b > a) await writeFile(idxUrl, idx.slice(0, a + 10) + ssrList(live, today, gyms) + idx.slice(b));
   } catch {}
   // 마이페이지(/my/)는 첫 화면과 같은 코드를 씀 — 매번 복사(글 목록은 비우고 검색 노출 안 함)
   try {

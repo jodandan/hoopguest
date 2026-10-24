@@ -86,6 +86,7 @@ button{font:inherit;color:inherit}
 .themebtn[data-mode="dark"] .moon{opacity:0;transform:rotate(90deg) scale(.6)}
 .themebtn:focus-visible{outline:3px solid var(--hero-text);outline-offset:2px}
 .hero .meta{color:var(--hero-sub)}
+.guidelnk{color:var(--hero-text);font-weight:700;text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
 .meta{color:var(--sub);font-size:var(--fs-sm);margin-top:6px}
 .intro{margin:12px 0 0;font-weight:500}
 .cacts{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px;margin-top:4px}
@@ -351,7 +352,7 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
   <div class="wrap">
     <div class="brand"><img src="/ball.svg" alt="" width="42" height="42"><h1>훕게스트 <span class="label">모아보기</span><span class="sr"> — 서울·경기·인천 농구 게스트·픽업게임·교류전 모집 글 모아보기</span></h1></div>
     <div class="heroacts"><button class="acctbtn" id="btnAcct" type="button" aria-label="로그인 — 기기끼리 동기화" title="로그인 — 기기끼리 동기화" aria-expanded="false" hidden><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2.3"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg><span>로그인</span><i class="dot" hidden></i></button><button class="themebtn" id="btnTheme" type="button" aria-label="어두운 화면으로" title="어두운 화면으로" data-mode="light"><svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div>
-    <p class="meta intro">서울·경기·인천 농구 게스트·픽업게임·연습경기 글을 지역·날짜·시간대로 골라 보세요.</p>
+    <p class="meta intro">서울·경기·인천 농구 게스트·픽업게임·연습경기 글을 지역·날짜·시간대로 골라 보세요. <a class="guidelnk" href="/guide/">처음이라면 가이드</a></p>
     <div class="meta" id="meta"><span class="ldball" aria-hidden="true"></span>불러오는 중…</div>
   </div>
 </header>
