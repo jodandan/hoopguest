@@ -1657,7 +1657,7 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
         if (last && Date.now() - last < 3 * 864e5) DATA.forEach(p => { if (Date.parse(p.posted) > last) FRESH.add(p.key); });
         storeSet0('bdr.lastVisit', Date.now()); }
       const lag = (Date.now() - Date.parse(d.updated)) / 3600e3;
-      $('meta').textContent = `최근 업데이트 ${ago(d.updated)} · 30분마다 갱신`;
+      $('meta').textContent = `최근 업데이트 ${ago(d.updated)} · 10분마다 확인`;
       if (lag > 2) {
         const w = $('stale'); w.hidden = false;
         w.innerHTML = `⚠️ 목록 업데이트가 ${ago(d.updated).replace(' 전', '')}째 멈춰 있어요. 최신 글은 <a href="https://m.cafe.daum.net/dongarry" target="_blank" rel="noopener">원문 카페</a>에서 확인해 주세요.`;
@@ -1681,7 +1681,7 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
       if (!d.updated || d.updated === dataUpdated) return;
       const old = new Set(DATA.map(p => p.key));
       DATA = (d.posts || []).map(p => p.key ? p : { ...p, board: 'guest', key: `Dilr:${p.id}` });
-      TODAY = kstToday(); dataUpdated = d.updated; $('meta').textContent = `최근 업데이트 ${ago(d.updated)} · 30분마다 갱신`;
+      TODAY = kstToday(); dataUpdated = d.updated; $('meta').textContent = `최근 업데이트 ${ago(d.updated)} · 10분마다 확인`;
       const add = DATA.filter(p => !old.has(p.key)); add.forEach(p => FRESH.add(p.key)); storeSet0('bdr.lastVisit', Date.now());
       render();
       const mine = add.filter(p => filtered().includes(p)).length;
