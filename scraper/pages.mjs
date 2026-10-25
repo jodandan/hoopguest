@@ -87,7 +87,7 @@ li .m{font-size:13px;color:var(--sub)} li .near{color:var(--text)}
 .empty{padding:20px;border:2px dashed var(--line);background:var(--card)}
 .cm{font-size:13px;color:var(--sub);margin:4px 0 0;line-height:1.6} .cm a{color:var(--text);font-weight:700}
 .links{margin-top:28px} .links h2{font-size:15px} .links a{display:inline-block;margin:4px 10px 4px 0;color:var(--text)}
-footer{font-size:13px;color:var(--sub);margin-top:28px;line-height:1.6}
+footer{font-size:13px;color:var(--sub);margin-top:28px;line-height:1.6} footer a{display:inline-block;padding:8px 0;margin:-8px 0}
 a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 /* 10-10 디자인 개편: 밝은 화면 = 정돈된 코트, 어두운 화면 = 야간 코트 (첫 화면과 같은 색, html[data-theme]로 고정 가능) */
