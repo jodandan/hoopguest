@@ -348,10 +348,8 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
 .pball{position:absolute;top:-7px;left:0;width:16px;height:16px;margin-left:-8px;pointer-events:none;z-index:2;transition:left .35s cubic-bezier(.3,.7,.4,1)}
 .pball.fly{animation:pass .35s ease-out}
 @keyframes pass{0%{transform:translateY(0)}50%{transform:translateY(-18px) rotate(180deg)}100%{transform:translateY(0) rotate(360deg)}}
-.daystrip button{background:#17181A;border-color:#17181A;color:#F4F4F2}
-.daystrip button small{font:400 var(--fs-sm)/1 var(--f-display);color:#FFB15C;margin-left:6px;letter-spacing:.06em;font-variant-numeric:tabular-nums}
-.daystrip button[aria-current="true"]{background:#F28A2E;border-color:#F28A2E;color:#17181A}.daystrip button[aria-current="true"] small{color:#17181A;opacity:1}
-.daystrip button:focus-visible{outline-color:#F28A2E}
+.daystrip button small{display:inline-block;font:400 var(--fs-xs)/1 var(--f-display);color:#FFB15C;background:#17181A;padding:3px 5px 2px;border-radius:5px;margin-left:6px;letter-spacing:.06em;font-variant-numeric:tabular-nums;min-width:12px;text-align:center}
+.daystrip button[aria-current="true"] small{color:#FFB15C;opacity:1}
 #pull{position:fixed;left:0;right:0;top:0;z-index:9;display:flex;align-items:flex-end;justify-content:center;height:0;overflow:hidden;pointer-events:none;padding-bottom:8px;box-sizing:border-box}
 #pull .pil{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border-radius:999px;background:var(--card);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.14)}
 #pull svg{width:26px;height:26px;transform-origin:50% 100%;display:block}#pull.busy svg{animation:dribble 1.1s ease-in-out infinite}
@@ -814,7 +812,9 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
     if (p.start) t = t.replace(TM, '');
     if (p.region1) t = t.replace(BR, '');
     t = t.replace(/^[\s,.·\-~/:!]+/, '').trim();
-    return t.length >= 5 ? t : o;
+    if (t.length < 5) return o;
+    if (t.length < 12 && p.board !== 'match') { const g = placeFor(p); if (g && !t.includes(g) && !o.includes(g)) t = `${g} ${t}`; } // "게스트 모집"처럼 짧으면 체육관 이름을 앞에
+    return t;
   }
   function card(p, dup = []) {
     const tags = [];
@@ -826,6 +826,7 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
     if (p.free && !(p.tags || []).includes('무료')) tags.push('<span class="tag g">무료</span>');
     for (const t of p.tags || []) tags.push(`<span class="tag c">${esc(t)}</span>`);
     if (p.closed) tags.push('<span class="tag x">마감</span>');
+    { const dot = tags.filter(t => t.startsWith('<span class="newdot')), rest = tags.filter(t => !t.startsWith('<span class="newdot')); const x = rest.find(t => t.includes('tag x')); const keep = rest.filter(t => t !== x).slice(0, x ? 2 : 3); if (x) keep.push(x); tags.length = 0; tags.push(...dot, ...keep); }
     const time = p.start
       ? `<div class="s">${esc(p.start)}</div><div class="e">${p.end ? '~' + esc(p.end) : ''}</div>${shotClock(p)}${p.amb ? '<div class="amb" title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전? 저녁?</div>' : ''}`
       : p.slot ? `<div class="unk"><b>${esc(p.slot)}</b><br>시각 미정</div>` : '<div class="unk">시간<br>미정</div>';
