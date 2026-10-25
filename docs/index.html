@@ -313,6 +313,16 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
   .bar{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--sp-4);align-items:center;padding-top:2px}.bar>*{grid-column:1/-1}
   .bar>.tools{grid-column:1;grid-row:1;margin-top:6px}.bar>.fsum{grid-column:2;grid-row:1;width:auto;max-width:150px;margin-top:6px;min-height:42px}.fsum-v{max-width:84px}
   .bar>.nowbtn{grid-row:2;min-height:36px;padding-top:4px;padding-bottom:4px;margin-top:6px;font-size:var(--fs-md)}
+/* 가로 폰(낮은 화면) 압축: 머리 한 줄·검색+지금+필터 한 줄·띠 얇게 */
+@media (orientation:landscape) and (max-height:500px){
+  .hero .wrap{padding-top:4px;padding-bottom:4px;flex-wrap:nowrap}.hero .brand{flex:none}.hero .brand img{width:24px;height:24px}.hero .brand h1{font-size:19px}
+  .hero .intro{margin-left:var(--sp-4)}.hero .guidelnk{min-height:24px}
+  .tabs{margin-top:4px}.tab{min-height:30px;padding:3px 10px}
+  .bar{grid-template-columns:minmax(0,1fr) auto auto;padding-top:0}
+  .bar>.tools{grid-column:1;grid-row:1;margin-top:4px}.bar>.nowbtn{grid-column:2;grid-row:1;margin-top:4px;min-height:36px;padding-left:12px;padding-right:12px}.bar>.nowbtn small{display:none}
+  .bar>.fsum{grid-column:3;grid-row:1;margin-top:4px;min-height:36px}.search{padding:5px 12px}
+  .count{padding-top:2px;padding-bottom:2px;min-height:0}.daystrip{padding-top:4px;padding-bottom:4px}.dayh{margin-top:2px;padding-top:4px;padding-bottom:4px}
+}
 }
 @media (max-width:359px){.card{padding:12px 2px 10px 10px;gap:var(--sp-4)}.time{width:50px}.time .s{font-size:var(--fs-lg)}.compact .time{width:48px}.card .body{padding-right:8px}.hero .wrap{column-gap:var(--sp-4)}.hero .meta,.hero .intro{font-size:var(--fs-2xs)}}
 @media (min-width:1080px){.wrap{max-width:1040px}.dayg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;align-items:stretch}.dayg>.card .body{display:flex;flex-direction:column}.dayg>.card .dup{order:1}.dayg>.card .cacts{order:2;margin-top:auto;padding-top:6px}.dayg>.dayh{grid-column:1/-1}.compact .dayg{grid-template-columns:repeat(3,minmax(0,1fr))}.pushbox{max-width:640px}}
