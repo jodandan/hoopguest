@@ -335,31 +335,24 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
 @keyframes listswap{from{opacity:.35;transform:translateY(4px)}to{opacity:1;transform:none}}
 .fpanel:not([hidden]),#fmore:not([hidden]),.mapbox:not([hidden]),.dup[open]>:not(summary){animation:boxin .22s ease}
 @supports (-webkit-touch-callout:none){.chip.homesel{font-size:var(--fs-lg)}}
-/* 10-25 농구 테마 ①샷클락 ②드리블 새로고침 ③전광판 날짜 띠 ④패스 ⑤하프코트 */
+/* 10-25 농구 테마 ②드리블 새로고침 ③전광판 날짜 띠 ④패스 ⑤하프코트 (①샷클락은 "N분 뒤 시작" 꼬리표와 겹쳐 뺌) */
 .court{position:fixed;left:50%;bottom:0;width:min(100vw,1040px);height:min(60vh,520px);transform:translateX(-50%);pointer-events:none;z-index:-1;color:var(--accent-strong);opacity:.06}
-.sc{display:inline-flex;align-items:center;margin-top:5px}
 .livefold{grid-column:1/-1;margin:2px 0 10px}.livefold summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;min-height:40px;padding:0 4px;font:700 var(--fs-sm)/1 var(--f-body);color:var(--sub);border-top:1px dashed var(--line2)}
 .livefold summary::-webkit-details-marker{display:none}.livefold summary::before{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);margin:0 4px 0 2px;transition:transform var(--dur-fast) ease}.livefold[open] summary::before{transform:rotate(45deg)}
 .livefold summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.lgrid{margin-top:8px}
 @media (min-width:1080px){.lgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;align-items:stretch}.lgrid>.card .body{display:flex;flex-direction:column}.lgrid>.card .dup{order:1}.lgrid>.card .cacts{order:2;margin-top:auto;padding-top:6px}}
-.sc svg{width:18px;height:18px;flex:none;transform:rotate(-90deg)}.sc .tr{stroke:var(--line2)}.sc .rg{stroke:var(--accent-strong);transition:stroke-dasharray 1s linear}
-.sc.hot .rg{stroke:var(--accent)}.sc.hot svg{animation:scpulse 1s ease-in-out infinite}.sc.live .rg{stroke:var(--muted)}.sc.live{color:var(--muted)}
-@keyframes scpulse{0%,100%{transform:rotate(-90deg) scale(1)}50%{transform:rotate(-90deg) scale(1.15)}}
 .tabs{position:relative;overflow:visible}
 .pball{position:absolute;top:-7px;left:0;width:16px;height:16px;margin-left:-8px;pointer-events:none;z-index:2;transition:left .35s cubic-bezier(.3,.7,.4,1)}
 .pball.fly{animation:pass .35s ease-out}
 @keyframes pass{0%{transform:translateY(0)}50%{transform:translateY(-18px) rotate(180deg)}100%{transform:translateY(0) rotate(360deg)}}
-.daystrip button{background:#17181A;border-color:#17181A;color:#F4F4F2}
-.daystrip button small{font:400 var(--fs-sm)/1 var(--f-display);color:#FFB15C;margin-left:6px;letter-spacing:.06em;font-variant-numeric:tabular-nums}
-.daystrip button[aria-current="true"]{background:#F28A2E;border-color:#F28A2E;color:#17181A}.daystrip button[aria-current="true"] small{color:#17181A;opacity:1}
-.daystrip button:focus-visible{outline-color:#F28A2E}
+.daystrip button small{display:inline-block;font:400 var(--fs-xs)/1 var(--f-display);color:#FFB15C;background:#17181A;padding:3px 5px 2px;border-radius:5px;margin-left:6px;letter-spacing:.06em;font-variant-numeric:tabular-nums;min-width:12px;text-align:center}
+.daystrip button[aria-current="true"] small{color:#FFB15C;opacity:1}
 #pull{position:fixed;left:0;right:0;top:0;z-index:9;display:flex;align-items:flex-end;justify-content:center;height:0;overflow:hidden;pointer-events:none;padding-bottom:8px;box-sizing:border-box}
 #pull .pil{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border-radius:999px;background:var(--card);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.14)}
 #pull svg{width:26px;height:26px;transform-origin:50% 100%;display:block}#pull.busy svg{animation:dribble 1.1s ease-in-out infinite}
 #pull span{font:700 var(--fs-xs)/1 var(--f-body);color:var(--text);white-space:nowrap}
 @keyframes dribble{0%{transform:translateY(0) scale(1.15,.85)}12%{transform:translateY(-30px) scale(.95,1.05)}24%{transform:translateY(0) scale(1.15,.85)}36%{transform:translateY(-22px)}48%{transform:translateY(0) scale(1.12,.88)}60%{transform:translateY(-14px)}72%{transform:translateY(0) scale(1.1,.9)}84%{transform:translateY(-6px)}100%{transform:translateY(0)}}
 @media (pointer:coarse){html,body{overscroll-behavior-y:contain}}
-@media (prefers-reduced-motion:reduce){.sc .rg{transition:none}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 .acctbtn{position:relative;display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 15px 0 12px;border:1px solid rgba(255,255,255,.5);border-radius:var(--r-pill);background:rgba(0,0,0,.14);color:var(--hero-text);font:700 var(--fs-sm)/1 var(--f-body);cursor:pointer;transition:background-color var(--dur-fast) ease}.acctbtn[hidden]{display:none}.acctbtn:hover{background:rgba(0,0,0,.24)}.acctbtn[aria-expanded="true"]{background:var(--hero-text);color:var(--hero);border-color:var(--hero-text)}.acctbtn:focus-visible{outline:3px solid var(--hero-text);outline-offset:2px}.acctbtn .dot{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--hl);border:2px solid var(--hero)}:root[data-theme="dark"] .acctbtn:not([aria-expanded="true"]){border-color:var(--line2);background:var(--card)}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .acctbtn:not([aria-expanded="true"]){border-color:var(--line2);background:var(--card)}}@media (max-width:639px){.cacts>.nav,.cacts>.shr,.cacts>.ics,.cacts>.rep{padding:6px 11px;min-height:32px}.cacts .ai{display:none}}@media (max-width:359px){.brand .label{display:none}.cacts{gap:4px}.card .cacts{margin-left:-72px}.compact .card .cacts{margin-left:0}.cacts>.nav,.cacts>.shr,.cacts>.ics,.cacts>.rep{padding:5px 8px;font-size:var(--fs-xs)}}@media (max-width:639px){.brand{padding-right:96px}.acctbtn{width:40px;height:40px;padding:0;justify-content:center}.acctbtn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
 .brand img{cursor:pointer;-webkit-tap-highlight-color:transparent}.brand img.bounce{animation:ballbounce .9s cubic-bezier(.3,.6,.4,1)}@keyframes ballbounce{0%{transform:none}18%{transform:translateY(-16px) rotate(90deg)}36%{transform:translateY(0) rotate(160deg) scale(1.06,.92)}52%{transform:translateY(-8px) rotate(230deg)}68%{transform:translateY(0) rotate(290deg) scale(1.03,.96)}82%{transform:translateY(-3px) rotate(330deg)}100%{transform:rotate(360deg)}}.ldball{display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-1px;background:url(/ball.svg) center/contain no-repeat;animation:hop .45s cubic-bezier(.3,0,.6,1) infinite alternate}@keyframes hop{from{transform:translateY(0) scale(1.08,.9)}30%{transform:translateY(-2px)}to{transform:translateY(-7px)}}.state .roll{display:block;width:44px;height:44px;margin:0 auto 14px;animation:roll 1s cubic-bezier(.2,.75,.3,1) both}.state.still .roll{animation:none}@keyframes roll{0%{transform:translateX(-150px) rotate(-420deg);opacity:0}15%{opacity:1}82%{transform:translateX(4px) rotate(8deg)}100%{transform:none}}.shotball{position:fixed;width:14px;height:14px;z-index:60;pointer-events:none}.star.pop{animation-delay:.42s}
@@ -794,29 +787,6 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
     return isLive(p) ? '<span class="tag live">진행 중</span>' : '';
   }
   const CHEV = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  // ① 샷클락: 오늘 글의 남은 시간(3시간 기준)을 동그라미로. 30분 안이면 빨갛게 깜빡, 시작하면 회색으로 꽉 참
-  const SC_LEN = 62.8;
-  function shotClock(p) {
-    if (p.closed || p.amb || !p.date || !p.start || p.date !== TODAY || isOver(p)) return '';
-    const d = minsToStart(p); if (d > 180) return '';
-    if (d <= 0) return ''; // 진행 중은 꼬리표·흐림으로 충분
-    const frac = d / 180, cls = d <= 30 ? ' hot' : '';
-    return `<span class="sc${cls}" aria-hidden="true"><svg viewBox="0 0 24 24"><circle class="tr" cx="12" cy="12" r="10" fill="none" stroke-width="3"/><circle class="rg" cx="12" cy="12" r="10" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(SC_LEN * frac).toFixed(1)} ${SC_LEN}"/></svg></span>`;
-  }
-  // ③ 제목 다이어트: 시각 칸·꼬리표에 이미 있는 앞머리([지역]·날짜·시간)를 떼고 보여 줌. 원문은 title 속성과 검색에 그대로
-  const BR=/^\s*(?:[\[(【][^\]\)】]{1,24}[\]\)】]|[\[(【][^\]\)】]{1,24}(?=\s*[\[(【]))\s*[·,/\-~]?\s*/;
-  const DT=/^\s*(?:(?:(?:20)?\d{2}\s*[년.\/-]\s*)?\d{1,2}\s*[\/.월-]\s*\d{1,2}(?!\s*[시:~])\s*(?:일(?!요))?\.?[\s-]*(?:\([^)]{1,6}\)|[월화수목금토일]\s*요일|[월화수목금토일](?![가-힣]))?|\d{1,2}\s*일\s*(?:\([^)]{1,6}\)|[월화수목금토일]요일|(?=\s*(?:오전|오후|저녁|\d)))|오늘|내일|모레|이번\s*주\s*[월화수목금토일]요일?|(?:이번|다음)\s*[월화수목금토일]요일?|[월화수목금토일]요일)\s*[,.·\-~/]?\s*/;
-  const H=String.raw`(?:(?:오전|오후|저녁|아침|낮|밤|새벽)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)`;
-  const TM=new RegExp(String.raw`^\s*(?:${H}\s*(?:(?:~|-|–|부터|에서|\s)\s*${H}?\s*(?:까지)?)?|(?:오전|오후|저녁|아침|밤|새벽)?\s*\d{1,2}\s*(?:~|-|–|부터)\s*(?:(?:오전|오후|저녁|밤)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)?\s*(?:까지)?)\s*(?:\(\s*\d+\s*시간\s*\d*분?\s*\))?\s*[,.·\-~/]?\s*`);
-  function cleanTitle(p) {
-    let t = unent(p.title); const o = t;
-    if (p.region1) for (let i = 0; i < 3; i++) { const n = t.replace(BR, ''); if (n === t) break; t = n; }
-    if (p.date) for (let i = 0; i < 2; i++) { const n = t.replace(DT, ''); if (n === t) break; t = n; }
-    if (p.start) t = t.replace(TM, '');
-    if (p.region1) t = t.replace(BR, '');
-    t = t.replace(/^[\s,.·\-~/:!]+/, '').trim();
-    return t.length >= 5 ? t : o;
-  }
   function card(p, dup = []) {
     const tags = [];
     if (isNew(p)) tags.push('<span class="newdot" title="새 글"><span class="sr">새 글</span></span>');
@@ -827,8 +797,9 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
     if (p.free && !(p.tags || []).includes('무료')) tags.push('<span class="tag g">무료</span>');
     for (const t of p.tags || []) tags.push(`<span class="tag c">${esc(t)}</span>`);
     if (p.closed) tags.push('<span class="tag x">마감</span>');
+    { const dot = tags.filter(t => t.startsWith('<span class="newdot')), rest = tags.filter(t => !t.startsWith('<span class="newdot')); const x = rest.find(t => t.includes('tag x')); const keep = rest.filter(t => t !== x).slice(0, x ? 2 : 3); if (x) keep.push(x); tags.length = 0; tags.push(...dot, ...keep); }
     const time = p.start
-      ? `<div class="s">${esc(p.start)}</div><div class="e">${p.end ? '~' + esc(p.end) : ''}</div>${shotClock(p)}${p.amb ? '<div class="amb" title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전? 저녁?</div>' : ''}`
+      ? `<div class="s">${esc(p.start)}</div><div class="e">${p.end ? '~' + esc(p.end) : ''}</div>${p.amb ? '<div class="amb" title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전? 저녁?</div>' : ''}`
       : p.slot ? `<div class="unk"><b>${esc(p.slot)}</b><br>시각 미정</div>` : '<div class="unk">시간<br>미정</div>';
     const on = saved.has(p.key);
     const when = S.sort === 'new' && p.date ? `${dayLabel(p.date)} · ` : '';
@@ -1246,8 +1217,6 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
       if (old) { if (want) old.outerHTML = want; else old.remove(); }
       else if (want) { const nd = art.querySelector('.tags .newdot'); (nd || art.querySelector('.tags')).insertAdjacentHTML(nd ? 'afterend' : 'afterbegin', want); }
       art.classList.toggle('live', isLive(p));
-      const sc = art.querySelector('.time .sc'), want2 = shotClock(p);
-      if (sc) { if (want2) sc.outerHTML = want2; else sc.remove(); } else if (want2) art.querySelector('.time .e')?.insertAdjacentHTML('afterend', want2);
     });
   }, 60000);
   // 지도 보기 — 동네별 글 수를 동그라미로. Leaflet(cdnjs) + OpenStreetMap 타일, 처음 열 때만 불러옴
