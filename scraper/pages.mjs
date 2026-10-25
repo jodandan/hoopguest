@@ -44,7 +44,7 @@ function dedupe(rows) {
   });
   return rows.filter(p => !drop.has(p.key));
 }
-const CAFE_NOTE = '<p class="cm">글을 누르면 카페 원문으로 가요. 원문은 카페 회원만 볼 수 있으니, 회원이 아니면 먼저 가입해 주세요: <a href="https://m.cafe.daum.net/dongarry" target="_blank" rel="noopener">[BDR]동아리농구방</a> · <a href="https://m.cafe.naver.com/cornrow" target="_blank" rel="noopener">NSB 농심카페</a></p>';
+const CAFE_NOTE = '<p class="cm">글을 누르면 카페 원문으로 가요(카페 회원만 볼 수 있어요): <a href="https://m.cafe.daum.net/dongarry" target="_blank" rel="noopener">[BDR]동아리농구방</a> · <a href="https://m.cafe.naver.com/cornrow" target="_blank" rel="noopener">NSB 농심카페</a></p>';
 function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, links, cta, home, trend = '', robots = '', empty = '', extra = '', place = null }) {
   const url = `${SITE}${path}`;
   const groups = new Map();
@@ -136,6 +136,13 @@ li{border-color:var(--card-line,#EFEAE2);border-radius:20px;padding:12px 14px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) li .t{color:var(--btn)}:root:not([data-theme="light"]) .srcm.nv{color:#5FD38A}:root:not([data-theme="light"]) .srcm.dm{color:#FF8A7E}:root:not([data-theme="light"]) li{border-color:var(--line)}}
 :root[data-theme="dark"] li .t{color:var(--btn)}:root[data-theme="dark"] .srcm.nv{color:#5FD38A}:root[data-theme="dark"] .srcm.dm{color:#FF8A7E}:root[data-theme="dark"] li{border-color:var(--line)}
 .c .when{font:400 24px/1.25 "Black Han Sans","Noto Sans KR",sans-serif;letter-spacing:.01em}
+/* 10-25 머리 압축: 폰·가로폰에서 첫 글을 위로 (첫 화면 ui-hero와 같은 방향) */
+.top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px}.top .mp{display:contents}.top .cta{margin:0;padding:0 16px;min-height:40px;display:inline-flex;align-items:center}
+.cm{margin:0 0 4px}
+@media (max-width:719px),(orientation:landscape) and (max-height:500px){
+.hdr .w{padding-top:6px;padding-bottom:6px}.hdr .brand{min-height:36px}.hdr .brand img{width:26px;height:26px}.hdr .brand b{font-size:21px}
+nav.bc{margin:4px 0 0}h1{font-size:22px;line-height:1.25;margin:0 0 4px}.intro{font-size:14px;line-height:1.5;margin:0 0 10px}
+h2{margin-top:16px}}
 </style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}')}</script>
 </head><body>
@@ -144,7 +151,7 @@ li{border-color:var(--card-line,#EFEAE2);border-radius:20px;padding:12px 14px}
 <nav class="bc" aria-label="위치">${crumbs.map(([n, u], i) => i === crumbs.length - 1 ? esc(n) : `<a href="${u}">${esc(n)}</a> › `).join('')}</nav>
 <h1>${esc(h1)}</h1>
 <p class="intro">${esc(intro)}</p>
-${extra}<a class="cta" href="${esc(cta)}">날짜·시간 필터로 보기 →</a>
+<div class="top">${extra}<a class="cta" href="${esc(cta)}">날짜·시간 필터로 보기 →</a></div>
 ${posts.length ? CAFE_NOTE : ''}${list}
 ${trend}
 <section class="links">${links.map(([t, ls]) => `<h2>${esc(t)}</h2><p>${ls.map(([n, u]) => `<a href="${u}">${esc(n)}</a>`).join('')}</p>`).join('')}</section>
