@@ -225,7 +225,7 @@ button{font:inherit;color:inherit}
 #list.has-strip .dayg{scroll-margin-top:51px}
 @media (prefers-reduced-motion:reduce){.card .more svg,.card.swipeback,.daystrip button{transition:none}.card.open .cacts{animation:none}}
 .tag.new{background:var(--hl);color:var(--hl-text);letter-spacing:.04em}
-.title{font-size:var(--fs-base);font-weight:500;line-height:1.45;padding:2px 0;word-break:keep-all;overflow-wrap:anywhere;text-decoration:none;display:block}
+.title{font-size:var(--fs-lg);font-weight:500;line-height:1.4;padding:2px 0;word-break:keep-all;overflow-wrap:anywhere;text-decoration:none;display:block}
 .title:hover{text-decoration:underline;text-decoration-thickness:2px;text-decoration-color:var(--accent)}
 .sub{font-size:var(--fs-xs);color:var(--sub);margin-top:4px;display:flex;gap:2px 12px;align-items:center;flex-wrap:wrap}
 .nav,.shr,.ics,.rep{display:inline-flex;align-items:center;gap:5px;background:none;border:0;border-radius:var(--r-pill);color:var(--accent);font-size:var(--fs-sm);font-weight:700;text-decoration:none;cursor:pointer;transition:background-color var(--dur-fast) ease}
@@ -336,7 +336,11 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
 @supports (-webkit-touch-callout:none){.chip.homesel{font-size:var(--fs-lg)}}
 /* 10-25 농구 테마 ①샷클락 ②드리블 새로고침 ③전광판 날짜 띠 ④패스 ⑤하프코트 */
 .court{position:fixed;left:50%;bottom:0;width:min(100vw,1040px);height:min(60vh,520px);transform:translateX(-50%);pointer-events:none;z-index:-1;color:var(--accent-strong);opacity:.06}
-.sc{display:inline-flex;align-items:center;gap:4px;margin-top:4px;font:700 var(--fs-2xs)/1 var(--f-body);color:var(--sub)}
+.sc{display:inline-flex;align-items:center;margin-top:5px}
+.livefold{grid-column:1/-1;margin:2px 0 10px}.livefold summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;min-height:40px;padding:0 4px;font:700 var(--fs-sm)/1 var(--f-body);color:var(--sub);border-top:1px dashed var(--line2)}
+.livefold summary::-webkit-details-marker{display:none}.livefold summary::before{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);margin:0 4px 0 2px;transition:transform var(--dur-fast) ease}.livefold[open] summary::before{transform:rotate(45deg)}
+.livefold summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.lgrid{margin-top:8px}
+@media (min-width:1080px){.lgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;align-items:stretch}.lgrid>.card .body{display:flex;flex-direction:column}.lgrid>.card .dup{order:1}.lgrid>.card .cacts{order:2;margin-top:auto;padding-top:6px}}
 .sc svg{width:18px;height:18px;flex:none;transform:rotate(-90deg)}.sc .tr{stroke:var(--line2)}.sc .rg{stroke:var(--accent-strong);transition:stroke-dasharray 1s linear}
 .sc.hot .rg{stroke:var(--accent)}.sc.hot svg{animation:scpulse 1s ease-in-out infinite}.sc.live .rg{stroke:var(--muted)}.sc.live{color:var(--muted)}
 @keyframes scpulse{0%,100%{transform:rotate(-90deg) scale(1)}50%{transform:rotate(-90deg) scale(1.15)}}
@@ -688,7 +692,7 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
   }
   function sortRows(rows) {
     if (S.sort === 'new') return rows.sort((a, b) => Date.parse(b.posted) - Date.parse(a.posted) || b.id - a.id);
-    return rows.sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999') || (a.start || '99').localeCompare(b.start || '99') || b.id - a.id);
+    return rows.sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999') || isLive(a) - isLive(b) || (a.start || '99').localeCompare(b.start || '99') || b.id - a.id);
   }
   function filtered() { return sortRows(base().filter(p => passes(p, S))); }
   // 재게시 묶음을 1건으로 센 목록 (칩 숫자를 목록 건수와 맞추기 위해)
@@ -781,6 +785,8 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
     pin: '<path d="M12 21s-6.5-5.8-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.2 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/>'
   }).map(([k, d]) => [k, `<svg class="ai" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`]));
   const OPEN = new Set(); // 펼친 카드(글 키) — 다시 그려도 유지
+  let LIVE_OPEN = false; // '이미 시작한 글' 접힘 상태 — 다시 그려도 유지
+  document.addEventListener('toggle', e => { if (e.target.classList?.contains('livefold')) { LIVE_OPEN = e.target.open; if (LIVE_OPEN) track('live_fold_open'); } }, true);
   const isLive = p => !p.closed && !p.amb && p.date === TODAY && !!p.start && minsToStart(p) <= 0 && !isOver(p);
   function timeTag(p) {
     if (startsSoon(p)) { const d = minsToStart(p); return `<span class="tag soon${d > 30 ? ' calm' : ''}">${soonLabel(p)}</span>`; }
@@ -792,8 +798,23 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
   function shotClock(p) {
     if (p.closed || p.amb || !p.date || !p.start || p.date !== TODAY || isOver(p)) return '';
     const d = minsToStart(p); if (d > 180) return '';
-    const live = d <= 0, frac = live ? 1 : d / 180, cls = live ? ' live' : d <= 30 ? ' hot' : '';
-    return `<span class="sc${cls}" aria-hidden="true"><svg viewBox="0 0 24 24"><circle class="tr" cx="12" cy="12" r="10" fill="none" stroke-width="3"/><circle class="rg" cx="12" cy="12" r="10" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(SC_LEN * frac).toFixed(1)} ${SC_LEN}"/></svg>${live ? '진행' : d < 60 ? d + '분' : Math.floor(d / 60) + '시간'}</span>`;
+    if (d <= 0) return ''; // 진행 중은 꼬리표·흐림으로 충분
+    const frac = d / 180, cls = d <= 30 ? ' hot' : '';
+    return `<span class="sc${cls}" aria-hidden="true"><svg viewBox="0 0 24 24"><circle class="tr" cx="12" cy="12" r="10" fill="none" stroke-width="3"/><circle class="rg" cx="12" cy="12" r="10" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(SC_LEN * frac).toFixed(1)} ${SC_LEN}"/></svg></span>`;
+  }
+  // ③ 제목 다이어트: 시각 칸·꼬리표에 이미 있는 앞머리([지역]·날짜·시간)를 떼고 보여 줌. 원문은 title 속성과 검색에 그대로
+  const BR=/^\s*(?:[\[(【][^\]\)】]{1,24}[\]\)】]|[\[(【][^\]\)】]{1,24}(?=\s*[\[(【]))\s*[·,/\-~]?\s*/;
+  const DT=/^\s*(?:(?:(?:20)?\d{2}\s*[년.\/-]\s*)?\d{1,2}\s*[\/.월-]\s*\d{1,2}(?!\s*[시:~])\s*(?:일(?!요))?\.?[\s-]*(?:\([^)]{1,6}\)|[월화수목금토일]\s*요일|[월화수목금토일](?![가-힣]))?|\d{1,2}\s*일\s*(?:\([^)]{1,6}\)|[월화수목금토일]요일|(?=\s*(?:오전|오후|저녁|\d)))|오늘|내일|모레|이번\s*주\s*[월화수목금토일]요일?|(?:이번|다음)\s*[월화수목금토일]요일?|[월화수목금토일]요일)\s*[,.·\-~/]?\s*/;
+  const H=String.raw`(?:(?:오전|오후|저녁|아침|낮|밤|새벽)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)`;
+  const TM=new RegExp(String.raw`^\s*(?:${H}\s*(?:(?:~|-|–|부터|에서|\s)\s*${H}?\s*(?:까지)?)?|(?:오전|오후|저녁|아침|밤|새벽)?\s*\d{1,2}\s*(?:~|-|–|부터)\s*(?:(?:오전|오후|저녁|밤)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)?\s*(?:까지)?)\s*(?:\(\s*\d+\s*시간\s*\d*분?\s*\))?\s*[,.·\-~/]?\s*`);
+  function cleanTitle(p) {
+    let t = unent(p.title); const o = t;
+    if (p.region1) for (let i = 0; i < 3; i++) { const n = t.replace(BR, ''); if (n === t) break; t = n; }
+    if (p.date) for (let i = 0; i < 2; i++) { const n = t.replace(DT, ''); if (n === t) break; t = n; }
+    if (p.start) t = t.replace(TM, '');
+    if (p.region1) t = t.replace(BR, '');
+    t = t.replace(/^[\s,.·\-~/:!]+/, '').trim();
+    return t.length >= 5 ? t : o;
   }
   function card(p, dup = []) {
     const tags = [];
@@ -823,7 +844,7 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
       <div class="time">${time}</div>
       <div class="body">
         <div class="tags">${tags.join('')}</div>
-        <a class="title" href="${esc(p.url)}" target="_blank" rel="noopener" data-key="${esc(p.key)}">${esc(unent(p.title))}<span class="sr">(새 창)</span></a>
+        <a class="title" href="${esc(p.url)}" target="_blank" rel="noopener" data-key="${esc(p.key)}" title="${esc(unent(p.title))}">${esc(cleanTitle(p))}<span class="sr">(새 창)</span></a>
         <div class="sub"><span>${seen ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${srcName(p)}</b> · ${when}${ago(p.posted)} · 조회 ${p.views ?? 0}</span></div><div class="cacts">${acts}</div>${dupHtml}
       </div>
       <button class="star" type="button" data-key="${esc(p.key)}" aria-pressed="${on}" aria-label="${on ? '저장 해제' : '저장'}">${on ? '★' : '☆'}</button>${more}
@@ -1013,13 +1034,15 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
       const dayN = {}; for (const g of groups) { const d = g.p.date || ''; dayN[d] = (dayN[d] || 0) + 1; }
       const days = Object.keys(dayN);
       if (days.length > 1) html += `<nav class="daystrip" id="dayStrip" aria-label="날짜로 이동">${days.map((d, i) => `<button type="button" data-day="${i}" aria-current="${i === 0}">${esc(!d ? '날짜 미정' : d === TODAY ? '오늘' : d === addDays(TODAY, 1) ? '내일' : `${+d.slice(5, 7)}/${+d.slice(8)} ${WEEK[wdOf(d)]}`)}<small>${dayN[d]}</small></button>`).join('')}</nav>`;
-      let di = -1;
+      let di = -1, fold = false;
+      const liveN = groups.filter(g => isLive(g.p)).length;
       for (const g of groups) {
         const d = g.p.date || '';
-        if (d !== cur) { di++; html += (cur === null ? '' : '</section>') + `<section class="dayg" id="day-${di}"><h2 class="dayh"><span class="day"><b>${esc(dayLabel(g.p.date))}</b> <small>${dayN[d]}건</small></span></h2>`; cur = d; }
+        if (d !== cur) { di++; html += (cur === null ? '' : (fold ? '</div></details>' : '') + '</section>') + `<section class="dayg" id="day-${di}"><h2 class="dayh"><span class="day"><b>${esc(dayLabel(g.p.date))}</b> <small>${dayN[d]}건</small></span></h2>`; cur = d; fold = false; }
+        if (!fold && isLive(g.p) && liveN < dayN[d]) { fold = true; html += `<details class="livefold"${LIVE_OPEN ? ' open' : ''}><summary>이미 시작한 글 ${liveN}건</summary><div class="lgrid">`; }
         html += card(g.p, g.dup);
       }
-      if (cur !== null) html += '</section>';
+      if (cur !== null) html += (fold ? '</div></details>' : '') + '</section>';
     }
     list.innerHTML = html + unkHtml;
     list.classList.toggle('has-strip', !!$('dayStrip'));
