@@ -1,0 +1,44 @@
+name: smoke
+
+# 화면 점검 — 실패하면 Actions 빨간불 + GitHub 메일 알림
+#  · push(화면 코드 변경 시): 저장소의 docs/ 를 로컬로 띄워 카드 목록이 그려지는지 확인
+#  · schedule(3시간마다):   실사이트를 열어 확인 + 수집이 3시간 넘게 멈췄는지 확인
+# (수집 봇 커밋은 GITHUB_TOKEN 으로 푸시돼 이 워크플로를 깨우지 않음)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/index.html'
+      - 'docs/sw.js'
+      - 'scraper/smoke.mjs'
+      - '.github/workflows/smoke.yml'
+  schedule:
+    - cron: '23 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright (Chromium)
+        run: |
+          npm i --no-save --no-package-lock playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Check repo build (push)
+        if: github.event_name == 'push'
+        run: node scraper/smoke.mjs
+      - name: Check live site (schedule / manual)
+        if: github.event_name != 'push'
+        run: node scraper/smoke.mjs https://hoopguest.kro.kr
