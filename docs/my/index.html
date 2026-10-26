@@ -373,7 +373,11 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 .hero{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='.2' stroke-width='4'%3E%3Cpath d='M400 30H300a70 70 0 0 0 0 140h100'/%3E%3Cpath d='M400 70h-90v60h90'/%3E%3Ccircle cx='310' cy='100' r='30'/%3E%3Cpath d='M400 -10C230 -10 190 60 190 100s40 110 210 110'/%3E%3C/g%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 40px center;background-size:auto 130%}
 .dayh .day b{padding-bottom:1px;box-shadow:inset 0 -3px 0 var(--accent-strong)}
 .tag.x{background:transparent;color:var(--accent);box-shadow:inset 0 0 0 1.5px currentColor;font:400 var(--fs-xs)/1.3 var(--f-display);letter-spacing:.06em;transform:rotate(-5deg)}
-.time{align-self:flex-start;background:var(--sb);border-radius:8px;padding:8px 4px 7px;text-align:center;box-shadow:inset 0 0 0 1px var(--sb-edge),inset 0 2px 6px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.35);background-image:radial-gradient(circle,rgba(255,255,255,.06) .6px,transparent 1px);background-size:4px 4px}
+.card{padding-left:94px}
+.time{position:absolute;left:0;top:0;bottom:0;align-self:stretch;justify-self:stretch;width:80px;display:flex;flex-direction:column;justify-content:center;align-items:stretch;background:var(--sb);border-radius:calc(var(--r-lg) - 1px) 0 0 calc(var(--r-lg) - 1px);padding:8px 4px;text-align:center;box-shadow:inset -1px 0 0 var(--sb-edge);background-image:radial-gradient(circle,rgba(255,255,255,.06) .6px,transparent 1px);background-size:4px 4px}
+@media (max-width:639px),(max-height:500px){.card{padding-left:80px}.time{width:68px}}
+@media (max-width:359px){.card{padding-left:64px}.time{width:56px}.card .cacts{margin-left:0}}
+.compact .card{padding-left:76px}.compact .time{width:64px;border-radius:calc(var(--r-md) - 1px) 0 0 calc(var(--r-md) - 1px)}
 .time .s{font-family:var(--f-led);color:var(--led);text-shadow:0 0 4px var(--led-glow),0 0 12px var(--led-glow);letter-spacing:.02em}
 .time .e{font-family:var(--f-led);color:var(--led-sub);text-shadow:0 0 5px rgba(255,150,30,.3);margin-top:3px}
 .time .s,.time .e{position:relative}
@@ -385,13 +389,10 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 .time .amb{color:#FF9B8F;white-space:nowrap;letter-spacing:-.03em}
 .card.closed .time .s,.card.closed .time .e{color:#6B665E;text-shadow:none}
 @media (max-width:359px){.time .amb,.time .unk{white-space:normal;word-break:keep-all}}
-/* 필터 영역 — 탭은 전광판 바, '지금 갈 수 있는 곳'은 LED 띠, 필터는 코트 라인 패널 */
-.tabs{background:var(--sb);box-shadow:inset 0 0 0 1px var(--sb-edge),inset 0 2px 6px rgba(0,0,0,.5);background-image:radial-gradient(circle,rgba(255,255,255,.05) .6px,transparent 1px);background-size:4px 4px}
-.tab{color:#A9A39A}
-.tab .n{font:400 1em/1 var(--f-led);color:var(--led);opacity:.6;margin-left:2px}
-.tab[aria-selected="true"]{background:#2A2C30;color:#FFF;box-shadow:inset 0 -3px 0 var(--led)}
-.tab[aria-selected="true"] .n{opacity:1;text-shadow:0 0 4px var(--led-glow),0 0 10px var(--led-glow)}
-.tab:hover:not([aria-selected="true"]){color:#E8E1D4}
+/* 필터 영역 — 탭 글 수는 LED 배지, '지금 갈 수 있는 곳'은 LED 띠, 필터는 코트 라인 패널 */
+.tab .n{display:inline-block;font:400 var(--fs-xs)/1 var(--f-led);color:var(--led);background:var(--sb);padding:3px 5px 2px;border-radius:5px;margin-left:6px;vertical-align:1px}
+.tab[aria-selected="true"] .n{text-shadow:0 0 4px var(--led-glow)}
+.tab:not([aria-selected="true"]) .n{opacity:.75}
 .nowbtn{background:var(--sb);border:0;color:#F2EDE4;box-shadow:inset 0 0 0 1px var(--sb-edge),inset 0 2px 6px rgba(0,0,0,.5);background-image:radial-gradient(circle,rgba(255,255,255,.05) .6px,transparent 1px);background-size:4px 4px}
 .nowbtn small{color:var(--led);font-weight:700;text-shadow:0 0 6px rgba(255,150,30,.35)}
 .nowbtn.empty span{color:#A9A39A}.nowbtn.empty small{color:var(--led-sub)}
