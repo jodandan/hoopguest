@@ -1707,9 +1707,10 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
     $('noticeLink')?.addEventListener('click', () => track('notice', { id: n.id, act: 'click' }));
   }).catch(() => {});
   const placesP = fetch('/places.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(j => j && j.ids && typeof j.ids === 'object' ? j.ids : null).catch(() => null);
+  let dataGot = false; // 데이터는 받았는데 그리다 실패한 것(코드 오류)과 못 받은 것(네트워크·서버)을 구분
   fetch('/data.json', { cache: 'no-cache' })
     .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(d => placesP.then(ids => { PLACE_IDS = ids; return d; }))
+    .then(d => { dataGot = true; return placesP.then(ids => { PLACE_IDS = ids; return d; }); })
     .then(d => {
       if (Array.isArray(d.boards) && d.boards.length) BOARDS = d.boards;
       if (!BOARDS.some(b => b.key === S.board)) S.board = 'guest';
@@ -1726,10 +1727,15 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
       }
       render();
     })
-    .catch(() => {
+    .catch(e => {
+      const kind = dataGot ? 'render' : 'data';
+      console.error(`[훕게스트] ${kind === 'render' ? '목록 그리기 실패(코드 오류)' : '목록 데이터 받기 실패'}:`, e);
+      track('list_error', { kind, msg: String((e && e.message) || e).slice(0, 100) });
       $('meta').textContent = '';
       $('list').setAttribute('aria-busy', 'false');
-      $('list').innerHTML = `<div class="state">목록을 불러오지 못했어요.<br>잠시 후 다시 시도하거나 <a href="https://m.cafe.daum.net/dongarry/Dilr" target="_blank" rel="noopener">원문 게시판</a>에서 확인해 주세요.</div>`;
+      $('list').innerHTML = kind === 'render'
+        ? `<div class="state" data-err="render">목록을 화면에 그리다 문제가 생겼어요.<br>새로고침해 보시고, 계속되면 <a href="https://m.cafe.daum.net/dongarry/Dilr" target="_blank" rel="noopener">원문 게시판</a>에서 확인해 주세요.</div>`
+        : `<div class="state" data-err="data">목록을 불러오지 못했어요.<br>잠시 후 다시 시도하거나 <a href="https://m.cafe.daum.net/dongarry/Dilr" target="_blank" rel="noopener">원문 게시판</a>에서 확인해 주세요.</div>`;
     });
 
   // ---- 열어 둔 채로 있으면 새 글을 받아 옴 (화면이 보일 때 5분마다, 다른 창을 보다 돌아와도 확인)
