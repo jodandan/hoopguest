@@ -362,7 +362,7 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
 /* 코트 테마 — 마루 바닥 · 하프코트 머리 · LED 전광판 시각 · 마감 도장 (DESIGN.md '코트 테마') */
 :root{--f-led:"DotGothic16",var(--f-display);
   --bg:#E9D4B0;--track:#DCC49B;--line:#DCC7A3;--wood-seam:rgba(105,62,15,.13);--wood-grain:rgba(120,75,25,.05);--wood-grain2:rgba(255,255,255,.07);
-  --sb:#121315;--sb-edge:#2B2D31;--led:#FFB23E;--led-glow:rgba(255,150,30,.55);--led-sub:#FF5A3C;--led-text:#E8E1D4}
+  --sb:#121315;--sb-edge:#2B2D31;--led:#FFB23E;--led-glow:rgba(255,150,30,.55);--led-sub:#D99A3A;--led-text:#E8E1D4}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1A160F;--track:#251F16;--line:#30291E;--wood-seam:rgba(0,0,0,.5);--wood-grain:rgba(255,210,140,.03);--wood-grain2:rgba(0,0,0,.14);--sb:#08090A;--sb-edge:#26282C}}
 :root[data-theme="dark"]{--bg:#1A160F;--track:#251F16;--line:#30291E;--wood-seam:rgba(0,0,0,.5);--wood-grain:rgba(255,210,140,.03);--wood-grain2:rgba(0,0,0,.14);--sb:#08090A;--sb-edge:#26282C}
 body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--wood-seam) 71px 72px),repeating-linear-gradient(90deg,var(--wood-grain2) 0 6px,transparent 6px 17px,var(--wood-grain) 17px 21px,transparent 21px 36px)}
@@ -374,9 +374,33 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 .tag.x{background:transparent;color:var(--accent);box-shadow:inset 0 0 0 1.5px currentColor;font:400 var(--fs-xs)/1.3 var(--f-display);letter-spacing:.06em;transform:rotate(-5deg)}
 .time{align-self:flex-start;background:var(--sb);border-radius:8px;padding:8px 4px 7px;text-align:center;box-shadow:inset 0 0 0 1px var(--sb-edge),inset 0 2px 6px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.35);background-image:radial-gradient(circle,rgba(255,255,255,.06) .6px,transparent 1px);background-size:4px 4px}
 .time .s{font-family:var(--f-led);color:var(--led);text-shadow:0 0 4px var(--led-glow),0 0 12px var(--led-glow);letter-spacing:.02em}
-.time .e{font-family:var(--f-led);color:var(--led-sub);text-shadow:0 0 6px rgba(255,90,60,.45);margin-top:3px}
-.time .unk{color:var(--led-text)}.time .unk b{color:var(--led)}
-.time .amb{color:#FF9B8F}
+.time .e{font-family:var(--f-led);color:var(--led-sub);text-shadow:0 0 5px rgba(255,150,30,.3);margin-top:3px}
+.time .s,.time .e{position:relative}
+.time .s::before{content:"88:88";position:absolute;inset:0;color:var(--led);opacity:.09;text-shadow:none;pointer-events:none}
+.time .e:empty::before{content:"~88:88";color:var(--led);opacity:.09;text-shadow:none}
+.time .e:empty{color:transparent}
+.time .s.off{color:var(--led);opacity:.35;text-shadow:none}
+.time .unk{font:700 var(--fs-2xs)/1.35 var(--f-body);color:var(--led-text);margin-top:3px;white-space:nowrap}.time .unk b{color:var(--led)}
+.time .amb{color:#FF9B8F;white-space:nowrap;letter-spacing:-.03em}
+.card.closed .time .s,.card.closed .time .e{color:#6B665E;text-shadow:none}
+@media (max-width:359px){.time .amb,.time .unk{white-space:normal;word-break:keep-all}}
+/* 필터 영역 — 탭은 전광판 바, '지금 갈 수 있는 곳'은 LED 띠, 필터는 코트 라인 패널 */
+.tabs{background:var(--sb);box-shadow:inset 0 0 0 1px var(--sb-edge),inset 0 2px 6px rgba(0,0,0,.5);background-image:radial-gradient(circle,rgba(255,255,255,.05) .6px,transparent 1px);background-size:4px 4px}
+.tab{color:#A9A39A}
+.tab .n{font:400 1em/1 var(--f-led);color:var(--led);opacity:.6;margin-left:2px}
+.tab[aria-selected="true"]{background:#2A2C30;color:#FFF;box-shadow:inset 0 -3px 0 var(--led)}
+.tab[aria-selected="true"] .n{opacity:1;text-shadow:0 0 4px var(--led-glow),0 0 10px var(--led-glow)}
+.tab:hover:not([aria-selected="true"]){color:#E8E1D4}
+.nowbtn{background:var(--sb);border:0;color:#F2EDE4;box-shadow:inset 0 0 0 1px var(--sb-edge),inset 0 2px 6px rgba(0,0,0,.5);background-image:radial-gradient(circle,rgba(255,255,255,.05) .6px,transparent 1px);background-size:4px 4px}
+.nowbtn small{color:var(--led);font-weight:700;text-shadow:0 0 6px rgba(255,150,30,.35)}
+.nowbtn.empty span{color:#A9A39A}.nowbtn.empty small{color:var(--led-sub)}
+.nowbtn[aria-pressed="true"]{background-color:#2A2C30;box-shadow:inset 0 0 0 2px var(--led)}
+.nowbtn[aria-pressed="true"] small{color:var(--led)}
+.ldot{background:var(--led);box-shadow:0 0 6px var(--led-glow)}
+.fpanel{--fp:color-mix(in srgb,var(--card) 72%,var(--bg));margin-top:10px;padding:8px 12px 6px;border-radius:var(--r-lg);background:var(--fp);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent-strong) 30%,transparent)}
+.fpanel .lbl{font:400 var(--fs-md)/1 var(--f-display);color:var(--accent);background:var(--fp);box-shadow:6px 0 6px -2px var(--fp);-webkit-backdrop-filter:none;backdrop-filter:none}
+.fpanel .chip[aria-pressed="true"]:not(.all){background:var(--accent-strong);border-color:var(--accent-strong);color:var(--on-accent)}
+.daystrip button small{font-family:var(--f-led);color:var(--led)}
 </style>
 <script>
   // 카카오 로그인에서 돌아오면 주소의 #login=… 을 GA보다 먼저 꺼내 저장하고 주소에서 지운다
@@ -611,7 +635,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
       const t = document.createElement('button');
       t.className = 'tab'; t.type = 'button'; t.setAttribute('role', 'tab');
       t.setAttribute('aria-selected', S.board === b.key ? 'true' : 'false');
-      t.textContent = `${b.name} ${counts[b.key] || 0}`;
+      t.innerHTML = `${esc(b.name)} <b class="n">${counts[b.key] || 0}</b>`;
       t.onclick = () => { if (S.board === b.key) return; S.board = b.key; track('board_switch', { board: b.key }); render(); passBall(true); };
       return t;
     }));
@@ -831,8 +855,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     if (p.closed) tags.push('<span class="tag x">마감</span>');
     { const dot = tags.filter(t => t.startsWith('<span class="newdot')), rest = tags.filter(t => !t.startsWith('<span class="newdot')); const x = rest.find(t => t.includes('tag x')); const keep = rest.filter(t => t !== x).slice(0, x ? 2 : 3); if (x) keep.push(x); tags.length = 0; tags.push(...dot, ...keep); }
     const time = p.start
-      ? `<div class="s">${esc(p.start)}</div><div class="e">${p.end ? '~' + esc(p.end) : ''}</div>${p.amb ? '<div class="amb" title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전? 저녁?</div>' : ''}`
-      : p.slot ? `<div class="unk"><b>${esc(p.slot)}</b><br>시각 미정</div>` : '<div class="unk">시간<br>미정</div>';
+      ? `<div class="s">${esc(p.start)}</div><div class="e">${p.end ? '~' + esc(p.end) : ''}</div>${p.amb ? '<div class="amb" title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전·<wbr>저녁?</div>' : ''}`
+      : `<div class="s off" aria-hidden="true">--:--</div><div class="unk">${p.slot ? `<b>${esc(p.slot)}</b> 미정` : '시간 미정'}</div>`;
     const on = saved.has(p.key);
     const when = S.sort === 'new' && p.date ? `${dayLabel(p.date)} · ` : '';
     const shr = `<button class="shr" type="button" data-key="${esc(p.key)}" aria-label="같이 갈 사람에게 공유">${AI.share}공유</button>`;
