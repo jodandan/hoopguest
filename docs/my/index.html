@@ -787,6 +787,22 @@ footer>a{display:inline-block;padding:4px 0;line-height:24px}
     return isLive(p) ? '<span class="tag live">진행 중</span>' : '';
   }
   const CHEV = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // ③ 제목 다이어트: 시각 칸·꼬리표에 이미 있는 앞머리([지역]·날짜·시간)를 떼고 보여 줌. 원문은 title 속성과 검색에 그대로
+  const BR=/^\s*(?:[\[(【][^\]\)】]{1,24}[\]\)】]|[\[(【][^\]\)】]{1,24}(?=\s*[\[(【]))\s*[·,/\-~]?\s*/;
+  const DT=/^\s*(?:(?:(?:20)?\d{2}\s*[년.\/-]\s*)?\d{1,2}\s*[\/.월-]\s*\d{1,2}(?!\s*[시:~])\s*(?:일(?!요))?\.?[\s-]*(?:\([^)]{1,6}\)|[월화수목금토일]\s*요일|[월화수목금토일](?![가-힣]))?|\d{1,2}\s*일\s*(?:\([^)]{1,6}\)|[월화수목금토일]요일|(?=\s*(?:오전|오후|저녁|\d)))|오늘|내일|모레|이번\s*주\s*[월화수목금토일]요일?|(?:이번|다음)\s*[월화수목금토일]요일?|[월화수목금토일]요일)\s*[,.·\-~/]?\s*/;
+  const H=String.raw`(?:(?:오전|오후|저녁|아침|낮|밤|새벽)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)`;
+  const TM=new RegExp(String.raw`^\s*(?:${H}\s*(?:(?:~|-|–|부터|에서|\s)\s*${H}?\s*(?:까지)?)?|(?:오전|오후|저녁|아침|밤|새벽)?\s*\d{1,2}\s*(?:~|-|–|부터)\s*(?:(?:오전|오후|저녁|밤)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)?\s*(?:까지)?)\s*(?:\(\s*\d+\s*시간\s*\d*분?\s*\))?\s*[,.·\-~/]?\s*`);
+  function cleanTitle(p) {
+    let t = unent(p.title); const o = t;
+    if (p.region1) for (let i = 0; i < 3; i++) { const n = t.replace(BR, ''); if (n === t) break; t = n; }
+    if (p.date) for (let i = 0; i < 2; i++) { const n = t.replace(DT, ''); if (n === t) break; t = n; }
+    if (p.start) t = t.replace(TM, '');
+    if (p.region1) t = t.replace(BR, '');
+    t = t.replace(/^[\s,.·\-~/:!]+/, '').trim();
+    if (t.length < 5) return o;
+    if (t.length < 12 && p.board !== 'match') { const g = placeFor(p); if (g && !t.includes(g) && !o.includes(g)) t = `${g} ${t}`; } // "게스트 모집"처럼 짧으면 체육관 이름을 앞에
+    return t;
+  }
   function card(p, dup = []) {
     const tags = [];
     if (isNew(p)) tags.push('<span class="newdot" title="새 글"><span class="sr">새 글</span></span>');
