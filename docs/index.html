@@ -1340,6 +1340,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   function canNudge() {
     if (store.get('bdr.push', null)) return false;
     const t = +store.get(NUDGE_KEY, 0) || 0; if (t && Date.now() - t < 14 * 864e5) return false;
+    if ('Notification' in window && Notification.permission === 'denied') return false; // 알림을 막아 둔 사람에겐 '알림 받기'가 막다른 길이라 안 보여 줌
     return 'Notification' in window || isIOS;
   }
   function showNudge() {
