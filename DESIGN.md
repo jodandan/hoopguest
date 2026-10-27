@@ -52,7 +52,8 @@
 
 ## 글자
 
-- 글꼴: 제목·시각은 `--f-display`(Black Han Sans), 본문은 `--f-body`(Noto Sans KR).
+- 글꼴: 로고·날짜 제목·필터 줄 이름·마감 도장은 `--f-display`/`--f-head`(동해독도 East Sea Dokdo, 붓글씨 — 글자가 작게 그려져 다른 글꼴보다 약 1.35배 크게 지정), 본문은 `--f-body`(Pretendard, jsDelivr 다이내믹 서브셋), 시각 숫자는 `--f-led`(DotGothic16), PC 머리 영역 영문 포인트는 `--f-tag`(Sedgwick Ave Display, 쓰는 글자만 받음).
+- 붓글씨는 작은 글씨(16px 미만)에 쓰지 않는다. 읽기 어려움.
 - 크기 단계:
 
 | 변수 | 값 | 쓰는 곳 |
