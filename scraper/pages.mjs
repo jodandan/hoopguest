@@ -65,6 +65,7 @@ li .t{position:absolute;left:0;top:0;bottom:0;width:78px;display:flex;flex-direc
 li .t i{font:400 13px/1.2 var(--f-led);font-style:normal;color:var(--led-sub);text-shadow:0 0 5px rgba(255,150,30,.3);margin-top:3px}
 li .t.off{color:var(--led);text-shadow:none} li .t.off b{opacity:.35;font-weight:400} li .t.off i{font:700 11px/1.3 var(--f-body);color:#E8E1D4;text-shadow:none;white-space:nowrap}
 li .t b{font-weight:400}
+h2 .dn{font:800 .8em/1 var(--f-body);font-style:normal;letter-spacing:-.01em;margin:0 .05em}
 li .t em{font:700 11px/1.2 var(--f-body);font-style:normal;color:#FF9B8F;text-shadow:none;margin-top:3px;white-space:nowrap}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) li .t{color:var(--led)}}
 :root[data-theme="dark"] li .t{color:var(--led)}
@@ -75,7 +76,7 @@ li .t em{font:700 11px/1.2 var(--f-body);font-style:normal;color:#FF9B8F;text-sh
 const BR=/^\s*(?:[\[(【][^\]\)】]{1,24}[\]\)】]|[\[(【][^\]\)】]{1,24}(?=\s*[\[(【]))\s*[·,/\-~]?\s*/;
 const DT=/^\s*(?:(?:(?:20)?\d{2}\s*[년.\/-]\s*)?\d{1,2}\s*[\/.월-]\s*\d{1,2}(?!\s*[시:~])\s*(?:일(?!요))?\.?[\s-]*(?:\([^)]{1,6}\)|[월화수목금토일]\s*요일|[월화수목금토일](?![가-힣]))?|\d{1,2}\s*일\s*(?:\([^)]{1,6}\)|[월화수목금토일]요일|(?=\s*(?:오전|오후|저녁|\d)))|오늘|내일|모레|이번\s*주\s*[월화수목금토일]요일?|(?:이번|다음)\s*[월화수목금토일]요일?|[월화수목금토일]요일)\s*[,.·\-~/]?\s*/;
 const H=String.raw`(?:(?:오전|오후|저녁|아침|낮|밤|새벽)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)`;
-const TM=new RegExp(String.raw`^\s*(?:${H}\s*(?:(?:~|-|–|부터|에서|\s)\s*${H}?\s*(?:까지)?)?|(?:오전|오후|저녁|아침|밤|새벽)?\s*\d{1,2}\s*(?:~|-|–|부터)\s*(?:(?:오전|오후|저녁|밤)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)?\s*(?:까지)?)\s*(?:\(\s*\d+\s*시간\s*\d*분?\s*\))?\s*[,.·\-~/]?\s*`);
+const TM=new RegExp(String.raw`^\s*(?:${H}\s*(?:(?:~|-|–|—|ㅡ|～|부터|에서|\s)\s*${H}?\s*(?:까지)?)?|(?:오전|오후|저녁|아침|밤|새벽)?\s*\d{1,2}\s*(?:~|-|–|—|ㅡ|～|부터)\s*(?:(?:오전|오후|저녁|밤)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)?\s*(?:까지)?)\s*(?:\(\s*\d+\s*시간\s*\d*분?\s*\))?\s*[,.·\-~/]?\s*`);
 function cleanTitle(p) {
   const o = unent(p.title); let head = '', t = o;
   for (let i = 0; i < 3; i++) { const m = t.match(BR); if (!m || !m[0].trim()) break; head += m[0].trim() + ' '; t = t.slice(m[0].length); }
@@ -89,7 +90,7 @@ function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, lin
   const url = `${SITE}${path}`;
   const groups = new Map();
   for (const p of posts) { const k = p.date || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); }
-  const list = posts.length ? [...groups].map(([d, ps]) => `<h2>${esc(dayLabel(d, today))} <small>${ps.length}건</small></h2><ul>${ps.map(p => `<li>${p.start ? `<span class="t"><b>${esc(p.start)}</b><i>${p.end ? '~' + esc(p.end) : ''}</i>${p.amb ? '<em title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전·저녁?</em>' : ''}</span>` : `<span class="t off"><b>--:--</b><i>${esc(p.slot ? p.slot + ' 미정' : '시간 미정')}</i></span>`}<a href="${esc(p.url)}" rel="nofollow noopener" target="_blank" title="${esc(unent(p.title))}">${esc(cleanTitle(p))}</a><span class="m">${home && p.region2 !== home ? `<b class="near">근처 ${esc(where(p))}</b> · ` : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방'}</b> · ${BOARD_NAME[p.board] || '게스트'}</span></li>`).join('')}</ul>`).join('')
+  const list = posts.length ? [...groups].map(([d, ps]) => `<h2>${esc(dayLabel(d, today)).replace(/(\d{1,2}\/\d{1,2})/, '<i class="dn">$1</i>')} <small>${ps.length}건</small></h2><ul>${ps.map(p => `<li>${p.start ? `<span class="t"><b>${esc(p.start)}</b><i>${p.end ? '~' + esc(p.end) : ''}</i>${p.amb ? '<em title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전·저녁?</em>' : ''}</span>` : `<span class="t off"><b>--:--</b><i>${esc(p.slot ? p.slot + ' 미정' : '시간 미정')}</i></span>`}<a href="${esc(p.url)}" rel="nofollow noopener" target="_blank" title="${esc(unent(p.title))}">${esc(cleanTitle(p))}</a><span class="m">${home && p.region2 !== home ? `<b class="near">근처 ${esc(where(p))}</b> · ` : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방'}</b> · ${BOARD_NAME[p.board] || '게스트'}</span></li>`).join('')}</ul>`).join('')
     : empty || '<p class="empty">지금은 모집 글이 없어요. 가까운 지역이나 전체 목록을 확인해 보세요.</p>';
   const ld = [{ '@context': 'https://schema.org', '@type': 'WebSite', name: '훕게스트', alternateName: ['hoopguest', '농구 게스트 모아보기'], url: SITE + '/' },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.map(([n, u], i) => ({ '@type': 'ListItem', position: i + 1, name: n, item: SITE + u })) },
