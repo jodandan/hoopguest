@@ -12,6 +12,7 @@
 <link rel="canonical" href="https://hoopguest.kro.kr/">
 <meta name="theme-color" content="#CF3326" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111316" media="(prefers-color-scheme: dark)">
+<script>try{if(matchMedia('(max-width:639px),(max-height:500px)').matches)document.documentElement.classList.add('fpc')}catch(e){}</script>
 <script>try{var hgT=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(hgT==='dark'||hgT==='light'){document.documentElement.dataset.theme=hgT;document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.content=hgT==='dark'?'#111316':'#CF3326'})}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -398,6 +399,22 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 .tab .n{display:inline-block;font:400 var(--fs-xs)/1 var(--f-led);color:var(--led);background:var(--sb);padding:3px 5px 2px;border-radius:5px;margin-left:6px;vertical-align:1px}
 .tab[aria-selected="true"] .n{text-shadow:0 0 4px var(--led-glow)}
 .tab:not([aria-selected="true"]) .n{opacity:.75}
+/* 10-27 QA 묶음 */
+.day .dn{font:800 .8em/1 var(--f-body);letter-spacing:-.01em;margin:0 .05em}
+:root{--tab-dim:#4A453D}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--tab-dim:var(--sub)}}
+:root[data-theme="dark"]{--tab-dim:var(--sub)}
+.tab{color:var(--tab-dim)}
+.tab.few{flex:0 0 auto}
+@media (max-width:359px){.tab .n{margin-left:3px;padding:3px 3px 2px}.tabs{gap:0}}
+.card a.title{padding:3px 0}
+.nudge{position:fixed;left:16px;right:76px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:30;max-width:520px;margin:0 auto;background:var(--card);color:var(--text);border:1px solid var(--line2);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:12px 14px;font-size:var(--fs-sm);line-height:1.5;opacity:0;transform:translateY(12px);transition:opacity var(--dur) ease,transform var(--dur) ease}
+.nudge.on{opacity:1;transform:none}.nudge p{margin:0}.nudge b{color:var(--accent)}.nudge .acts{display:flex;gap:6px;margin-top:8px}
+.nudge .chip.primary{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--on-accent);font-weight:700}
+@media (prefers-reduced-motion:reduce){.nudge{transition:none}}
+.fpc .fpanel{display:none}
+.tabs{min-height:48px;box-sizing:border-box}
+@media (max-width:639px),(max-height:500px){.tabs{min-height:44px}}
 .nowbtn{background:var(--sb);border:0;color:#F2EDE4;box-shadow:inset 0 0 0 1px var(--sb-edge),inset 0 2px 6px rgba(0,0,0,.5);background-image:radial-gradient(circle,rgba(255,255,255,.05) .6px,transparent 1px);background-size:4px 4px}
 .nowbtn small{color:var(--led);font-weight:700;text-shadow:0 0 6px rgba(255,150,30,.35)}
 .nowbtn.empty span{color:#A9A39A}.nowbtn.empty small{color:var(--led-sub)}
@@ -518,6 +535,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 </div>
 <div class="modal" id="acctModal" hidden><div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="acctTitle"><div class="shead"><b id="acctTitle">카카오 로그인</b><button class="sx" type="button" data-close aria-label="닫기">✕</button></div><div class="pushbox" id="acctBox"></div></div></div>
 <div class="modal" id="contactModal" hidden><div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ctTitle"><div class="shead"><b id="ctTitle">문의하기</b><button class="sx" type="button" data-close aria-label="닫기">✕</button></div><form class="ctform" id="ctForm" novalidate><fieldset class="ctkind"><legend>어떤 문의인가요?</legend><label><input type="radio" name="ctKind" value="delete" checked><span>게시글 제외 요청</span></label><label><input type="radio" name="ctKind" value="error"><span>정보 오류</span></label><label><input type="radio" name="ctKind" value="idea"><span>제안</span></label><label><input type="radio" name="ctKind" value="etc"><span>기타</span></label></fieldset><label class="ctl" for="ctBody">내용</label><textarea id="ctBody" rows="5" maxlength="2000" placeholder="게시글 제외 요청이면 글 제목이나 원문 링크를 적어 주세요."></textarea><label class="ctl" for="ctReply">답장 받을 연락처 <small>(선택)</small></label><input id="ctReply" type="text" maxlength="100" autocomplete="email" placeholder="이메일이나 오픈채팅 링크"><input class="hp" id="ctHp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"><p class="ctmsg" id="ctMsg" role="status"></p><button class="ctsend" id="ctSend" type="submit">보내기</button><p class="note">보낸 내용은 운영자만 봐요. 연락처는 답장할 때만 쓰고, 처리하고 6개월 뒤 지워요. <a href="/privacy/">개인정보 처리방침</a></p></form><div class="ctdone" id="ctDone" hidden><p><b>보냈어요.</b> 확인하고 처리할게요. 연락처를 남겼다면 그리로 답장드려요.</p><button class="ctsend" type="button" data-close>닫기</button></div></div></div>
+<div class="nudge" id="alertNudge" role="dialog" aria-label="새 글 알림 제안" hidden><p>다음엔 다시 찾아보지 않아도 돼요. <b>지금 고른 조건</b>으로 새 글이 올라오면 알려드릴까요?</p><div class="acts"><button class="chip sm primary" id="ngOn" type="button">알림 받기</button><button class="chip sm" id="ngX" type="button">괜찮아요</button></div></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -657,7 +675,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     for (const bd of BOARDS) counts[bd.key] = groupDupes(DATA.filter(p => boardOf(p) === bd.key && !isOver(p) && !p.closed)).length;
     $('tabs').replaceChildren(...BOARDS.map(b => {
       const t = document.createElement('button');
-      t.className = 'tab'; t.type = 'button'; t.setAttribute('role', 'tab');
+      t.className = (counts[b.key] || 0) <= 2 ? 'tab few' : 'tab'; t.type = 'button'; t.setAttribute('role', 'tab');
       t.setAttribute('aria-selected', S.board === b.key ? 'true' : 'false');
       t.innerHTML = `${esc(b.name)} <b class="n">${counts[b.key] || 0}</b>`;
       t.onclick = () => { if (S.board === b.key) return; S.board = b.key; track('board_switch', { board: b.key }); render(); passBall(true); };
@@ -855,7 +873,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   const BR=/^\s*(?:[\[(【][^\]\)】]{1,24}[\]\)】]|[\[(【][^\]\)】]{1,24}(?=\s*[\[(【]))\s*[·,/\-~]?\s*/;
   const DT=/^\s*(?:(?:(?:20)?\d{2}\s*[년.\/-]\s*)?\d{1,2}\s*[\/.월-]\s*\d{1,2}(?!\s*[시:~])\s*(?:일(?!요))?\.?[\s-]*(?:\([^)]{1,6}\)|[월화수목금토일]\s*요일|[월화수목금토일](?![가-힣]))?|\d{1,2}\s*일\s*(?:\([^)]{1,6}\)|[월화수목금토일]요일|(?=\s*(?:오전|오후|저녁|\d)))|오늘|내일|모레|이번\s*주\s*[월화수목금토일]요일?|(?:이번|다음)\s*[월화수목금토일]요일?|[월화수목금토일]요일)\s*[,.·\-~/]?\s*/;
   const H=String.raw`(?:(?:오전|오후|저녁|아침|낮|밤|새벽)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)`;
-  const TM=new RegExp(String.raw`^\s*(?:${H}\s*(?:(?:~|-|–|부터|에서|\s)\s*${H}?\s*(?:까지)?)?|(?:오전|오후|저녁|아침|밤|새벽)?\s*\d{1,2}\s*(?:~|-|–|부터)\s*(?:(?:오전|오후|저녁|밤)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)?\s*(?:까지)?)\s*(?:\(\s*\d+\s*시간\s*\d*분?\s*\))?\s*[,.·\-~/]?\s*`);
+  const TM=new RegExp(String.raw`^\s*(?:${H}\s*(?:(?:~|-|–|—|ㅡ|～|부터|에서|\s)\s*${H}?\s*(?:까지)?)?|(?:오전|오후|저녁|아침|밤|새벽)?\s*\d{1,2}\s*(?:~|-|–|—|ㅡ|～|부터)\s*(?:(?:오전|오후|저녁|밤)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)?\s*(?:까지)?)\s*(?:\(\s*\d+\s*시간\s*\d*분?\s*\))?\s*[,.·\-~/]?\s*`);
   function cleanTitle(p) {
     let t = unent(p.title); const o = t;
     if (p.region1) for (let i = 0; i < 3; i++) { const n = t.replace(BR, ''); if (n === t) break; t = n; }
@@ -867,6 +885,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     if (t.length < 12 && p.board !== 'match') { const g = placeFor(p); if (g && !t.includes(g) && !o.includes(g)) t = `${g} ${t}`; } // "게스트 모집"처럼 짧으면 체육관 이름을 앞에
     return t;
   }
+  // 날짜 제목: '오늘·내일·요일' 같은 말은 붓글씨, 숫자(10/27)는 훑어보기 쉽게 본문 굵은 글꼴
+  const dayHtml = d => esc(dayLabel(d)).replace(/(\d{1,2}\/\d{1,2})/, '<i class="dn">$1</i>');
   function card(p, dup = []) {
     const tags = [];
     if (isNew(p)) tags.push('<span class="newdot" title="새 글"><span class="sr">새 글</span></span>');
@@ -1032,7 +1052,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   addEventListener('resize', markScroll);
   const mqMobile = matchMedia('(max-width:639px),(max-height:500px)');
   function setPanel(open) {
-    $('fpanel').hidden = mqMobile.matches && !open;
+    $('fpanel').hidden = mqMobile.matches && !open; document.documentElement.classList.remove('fpc');
     $('fToggle').setAttribute('aria-expanded', String(!$('fpanel').hidden));
     if (open) requestAnimationFrame(markScroll);
   }
@@ -1090,7 +1110,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
       const liveN = groups.filter(g => isLive(g.p)).length;
       for (const g of groups) {
         const d = g.p.date || '';
-        if (d !== cur) { di++; html += (cur === null ? '' : (fold ? '</div></details>' : '') + '</section>') + `<section class="dayg" id="day-${di}"><h2 class="dayh"><span class="day"><b>${esc(dayLabel(g.p.date))}</b> <small>${dayN[d]}건</small></span></h2>`; cur = d; fold = false; }
+        if (d !== cur) { di++; html += (cur === null ? '' : (fold ? '</div></details>' : '') + '</section>') + `<section class="dayg" id="day-${di}"><h2 class="dayh"><span class="day"><b>${dayHtml(g.p.date)}</b> <small>${dayN[d]}건</small></span></h2>`; cur = d; fold = false; }
         if (!fold && isLive(g.p) && liveN < dayN[d]) { fold = true; html += `<details class="livefold"${LIVE_OPEN ? ' open' : ''}><summary>이미 시작한 글 ${liveN}건</summary><div class="lgrid">`; }
         html += card(g.p, g.dup);
       }
@@ -1198,8 +1218,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     const a = e.target.closest('a.title');
     if (a && cafeHintFirst(e, a)) return;
     const cb = e.target.closest('.cafebox a');
-    if (cb) { const src = cb.closest('.cafebox').dataset.src; cafeHintDone(src); track('cafe_hint', { step: cb.dataset.act, post_id: cb.dataset.key, cafe: src }); if (cb.dataset.act === 'open') { markSeen(cb.dataset.key); const p = byKey(cb.dataset.key); if (p) track('open_post', { page_type: 'home', via: 'cafe_hint', post_id: p.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); } setTimeout(render, 300); return; }
-    if (a) { markSeen(a.dataset.key); setTimeout(render, 300); const p = byKey(a.dataset.key); track('open_post', { page_type: 'home', post_id: a.dataset.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); return; }
+    if (cb) { const src = cb.closest('.cafebox').dataset.src; cafeHintDone(src); track('cafe_hint', { step: cb.dataset.act, post_id: cb.dataset.key, cafe: src }); if (cb.dataset.act === 'open') { markSeen(cb.dataset.key); armNudge(); const p = byKey(cb.dataset.key); if (p) track('open_post', { page_type: 'home', via: 'cafe_hint', post_id: p.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); } setTimeout(render, 300); return; }
+    if (a) { markSeen(a.dataset.key); armNudge(); setTimeout(render, 300); const p = byKey(a.dataset.key); track('open_post', { page_type: 'home', post_id: a.dataset.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); return; }
     const mo = e.target.closest('.card .more');
     if (mo) { toggleCard(mo.closest('.card'), 'button'); return; }
     const b = e.target.closest('.star');
@@ -1325,6 +1345,27 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     };
     $('mhX').onclick = () => { store.set('bdr.matchHint', 1); track('alert_preset', { from: 'match', step: 'close' }); el.hidden = true; };
   }
+  // 원문을 보고 돌아왔을 때 한 번: 지금 조건으로 새 글 알림을 제안 (이미 받는 중이거나 2주 안에 닫았으면 안 보임) — 핵심 지표 '재방문·알림 구독'용
+  const NUDGE_KEY = 'bdr.alertNudge'; let nudgeArmed = false;
+  const armNudge = () => { nudgeArmed = true; };
+  function canNudge() {
+    if (store.get('bdr.push', null)) return false;
+    const t = +store.get(NUDGE_KEY, 0) || 0; if (t && Date.now() - t < 14 * 864e5) return false;
+    return 'Notification' in window || isIOS;
+  }
+  function showNudge() {
+    const el = $('alertNudge'); if (!el || !nudgeArmed || !canNudge() || document.visibilityState !== 'visible') return;
+    nudgeArmed = false; el.hidden = false; requestAnimationFrame(() => el.classList.add('on'));
+    track('alert_nudge', { step: 'shown', board: S.board });
+  }
+  function hideNudge() { const el = $('alertNudge'); el.classList.remove('on'); setTimeout(() => { el.hidden = true; }, 220); store.set(NUDGE_KEY, Date.now()); }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(showNudge, 600); });
+  $('ngX').onclick = () => { track('alert_nudge', { step: 'close' }); hideNudge(); };
+  $('ngOn').onclick = () => {
+    track('alert_nudge', { step: 'open', board: S.board }); hideNudge();
+    const box = $('pushBox'); if (box.hidden) $('btnPush').click(); else renderPush();
+    box.scrollIntoView({ block: 'nearest', behavior: calm() ? 'auto' : 'smooth' }); $('pushOn')?.focus({ preventScroll: true });
+  };
   function renderFavNote() {
     const el = $('favNote'); if (!el) return;
     if (!S.favNote) { el.hidden = true; return; }
