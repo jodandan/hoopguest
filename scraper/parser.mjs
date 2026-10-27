@@ -189,8 +189,9 @@ export function parseDate(title, posted) {
   return { date: dt ? ymd(dt) : null, span };
 }
 
-const PM = /(오후|저녁|밤|pm|PM)/;
-const AM = /(오전|아침|새벽|am|AM)/;
+// 영문 am/pm은 단어로 따로 쓴 것만 ('CHAMP' 같은 팀명 속 AM을 오전으로 보지 않게)
+const PM = /(오후|저녁|밤|(?<![a-z])pm(?![a-z]))/i;
+const AM = /(오전|아침|새벽|(?<![a-z])am(?![a-z]))/i;
 
 function toMin(pref, h, mm) {
   h = +h; mm = +(mm || 0);
@@ -213,7 +214,11 @@ export function parseTime(title, dateSpan, wdNum = null) {
     return +a >= 5 && +a <= 23 && +b <= 24 && d >= 1 && d <= 4 ? `${w} ${a}~${b}시` : all;
   }).replace(/§/g, ' ');
   t = t.replace(/\d+\s*(명|층|부\)|호선|대\s*(이상|이하|환영|~)|번|km)/g, ' ')
-    .replace(/(?<![\d시:])\d{1,2}\s*분\s*(모집|구|초청)/g, ' '); // '2분 모집'(인원)만 제거, '11시50분 초청'은 유지
+    .replace(/(?<![\d시:])\d{1,2}\s*분\s*(모집|구|초청)/g, ' ') // '2분 모집'(인원)만 제거, '11시50분 초청'은 유지
+    // '7pm'·'9:30pm'처럼 숫자 뒤에 붙은 am/pm → '오후 7시'·'오후 9:30' (앞에 붙는 경우만 읽던 문제)
+    .replace(/(\d{1,2})(:\d{2})?\s*([ap])\.?m\.?(?![a-z])/gi, (all, h, mm, ap) => `${/p/i.test(ap) ? '오후' : '오전'} ${h}${mm || '시'}`)
+    .replace(/[ㅡ–—～∼]/g, '~') // '7ㅡ10'처럼 한글 모음·긴 줄표로 쓴 범위
+    .replace(/(?<![\d:])\d{1,2}\s*-\s*\d{1,2}\s*-(?!\s*\d)/g, ' '); // '10-24-토요일'처럼 끝에 '-'가 붙은 날짜를 시각(10~24시)으로 읽지 않게
   const re = new RegExp(`${PREF}${HM}\\s*(?:~|-|부터|에서)\\s*${PREF}${HM}\\s*(시|까지)?`);
   const one = new RegExp(`${PREF}(\\d{1,2})\\s*(?::\\s*(\\d{2})|시\\s*(?:(\\d{1,2})\\s*분|(반))?)`);
   let m = t.match(re);
@@ -240,6 +245,11 @@ export function parseTime(title, dateSpan, wdNum = null) {
     if (s != null && !p1 && +h1 >= 1 && +h1 <= 6 && !/^0/.test(h1)) s += 720;
   }
   if (s == null) return { start: null, end: null };
+  // 시각 바로 앞은 아니지만 제목에 '저녁·밤'만 있고 오전 쪽 말이 없으면 오후로 ('오늘 저녁 10월 27일 9:00-11:30' → 21:00)
+  if (!explicit && s < 720 && s >= 60 && /저녁|밤|야간/.test(t) && !AM.test(t) && !/낮/.test(t)) {
+    s += 720;
+    if (e != null && e < s) e = e + 720 < s ? (e % 720) + 1440 : e + 720;
+  }
   // 평일인데 오전/오후 표시 없이 '7시~10시'처럼만 쓴 글은 오전인지 저녁인지 알 수 없음
   const amb = !explicit && !PM.test(t) && !AM.test(t) && !/낮|야간|퇴근|조기/.test(t)
     && wdNum >= 1 && wdNum <= 5 && s >= 420 && s < 660 && (e == null || e <= 720);
