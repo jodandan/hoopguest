@@ -1,7 +1,7 @@
 name: smoke
 
 # 화면 점검 — 실패하면 Actions 빨간불 + GitHub 메일 알림
-#  · push(화면 코드 변경 시): 저장소의 docs/ 를 로컬로 띄워 카드 목록이 그려지는지 확인
+#  · push(화면·파서 코드 변경 시): 파서 회귀 테스트 + 저장소의 docs/ 를 로컬로 띄워 카드 목록이 그려지는지 확인
 #  · schedule(3시간마다):   실사이트를 열어 확인 + 수집이 3시간 넘게 멈췄는지 확인
 # (수집 봇 커밋은 GITHUB_TOKEN 으로 푸시돼 이 워크플로를 깨우지 않음)
 on:
@@ -11,6 +11,10 @@ on:
       - 'docs/index.html'
       - 'docs/sw.js'
       - 'scraper/smoke.mjs'
+      - 'scraper/parser.mjs'
+      - 'scraper/parser.test.mjs'
+      - 'scraper/parser-cases.json'
+      - 'scraper/pages.mjs'
       - '.github/workflows/smoke.yml'
   schedule:
     - cron: '23 */3 * * *'
@@ -32,6 +36,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Parser regression test (시각·시간대 판정)
+        if: github.event_name == 'push'
+        run: node --test scraper/parser.test.mjs
       - name: Install Playwright (Chromium)
         run: |
           npm i --no-save --no-package-lock playwright@1.48.2
