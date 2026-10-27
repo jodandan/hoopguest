@@ -28,6 +28,7 @@
 3. **알림 구독 순증** = `push_subscribe` − `push_unsubscribe` (주간)
 - GA4 설정: `open_post`·`push_subscribe`를 주요 이벤트로, `page_type`을 이벤트 범위 맞춤 측정기준으로 등록
 - 디자인·기능을 바꿀 때는 이 3개가 2주 동안 어떻게 바뀌었는지로 판단한다
+- 알림 제안(10-27): 원문을 보고 돌아온 순간 한 번 '지금 조건으로 새 글 알림' 안내(`alert_nudge` step shown·open·close). 알림 중이거나 2주 안에 닫았으면 안 보임
 
 ## 입출력
 - 입력: `https://m.cafe.daum.net/dongarry/Dilr` 목록 페이지 1~N
