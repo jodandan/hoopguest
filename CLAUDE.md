@@ -17,7 +17,7 @@
 - 카카오 API 결과는 장소 ID만 저장한다(이름·주소·좌표 저장 금지).
 - 실명·이메일 아이디를 코드·문서·커밋에 넣지 않는다. 운영자 표기는 "운영자".
 - `docs/guide/index.html`을 고치면 `pages.mjs`의 `GUIDE_UPDATED`도 바꾼다.
-- 화면을 바꾸면 320·360·390px·가로·PC × 밝게/어둡게에서 넘침을 확인한다. 폭 점검은 Black Han Sans가 실제로 로드된 상태에서 한다.
+- 화면을 바꾸면 320·360·390px·가로·PC × 밝게/어둡게에서 넘침을 확인한다. 폭 점검은 실제 글꼴(동해독도·Pretendard·DotGothic16)이 로드된 상태에서 한다.
 
 ## 토큰 절약 (모든 세션·팀원 공통)
 - 큰 파일은 통째로 읽지 않는다. `docs/index.html`(약 170KB), `scraper/pages.mjs`(50KB), `docs/data.json`, `data/history.json`은 Grep으로 위치를 찾고 필요한 줄만 offset·limit으로 읽는다. JSON은 `node -e`로 필요한 값만 뽑는다.
