@@ -73,6 +73,34 @@ try {
     await ctx.close();
   }
 
+  // 폰 터치 동작(로컬 점검만): 카드를 왼쪽으로 밀면 저장, 맨 위에서 아래로 당기면 새로고침
+  if (!LIVE) {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: 'block', locale: 'ko-KR', timezoneId: 'Asia/Seoul' });
+    const page = await ctx.newPage();
+    await page.route('**/*', r => r.request().url().startsWith(BASE) ? r.continue() : r.abort());
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForSelector('#list article', { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(800);
+    const cdp = await ctx.newCDPSession(page);
+    const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y]) => ({ x, y })) });
+    const bb = await page.locator('#list article.card').first().boundingBox();
+    if (bb) {
+      const y = bb.y + bb.height / 2, x0 = bb.x + bb.width - 40;
+      await touch('touchStart', [[x0, y]]);
+      for (let i = 1; i <= 12; i++) { await touch('touchMove', [[x0 - i * 12, y]]); await page.waitForTimeout(16); }
+      await touch('touchEnd', []); await page.waitForTimeout(600);
+      const saved = await page.evaluate(() => document.querySelector('#list article.card .star')?.getAttribute('aria-pressed'));
+      if (saved === 'true') ok('[폰] 밀어서 저장 동작'); else fail('[폰] 카드를 밀어도 저장되지 않음');
+    } else fail('[폰] 카드를 찾지 못해 밀어서 저장 점검 못 함');
+    await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(200);
+    let refetch = 0; page.on('request', r => { if (r.url().includes('/data.json')) refetch++; });
+    await touch('touchStart', [[200, 300]]);
+    for (let i = 1; i <= 14; i++) { await touch('touchMove', [[200, 300 + i * 12]]); await page.waitForTimeout(16); }
+    await touch('touchEnd', []); await page.waitForTimeout(1200);
+    if (refetch > 0) ok('[폰] 당겨서 새로고침 동작'); else fail('[폰] 당겨도 새 글을 받지 않음');
+    await ctx.close();
+  }
+
   // 실사이트 점검일 때만: 수집이 멈추지 않았는지(마지막 업데이트 3시간 이내)
   if (LIVE) {
     const d = await fetch(BASE + '/data.json?t=' + Date.now()).then(r => r.json()).catch(() => null);
