@@ -9,6 +9,7 @@
 
 ## 반드시 지킬 것
 - `placeOf`는 `docs/index.html`과 `scraper/pages.mjs` 두 곳에 같은 코드가 있다. 고치면 둘 다 고친다.
+- 제목 정리 정규식(`BR`·`DT`·`H`·`TM`, `cleanTitle`)과 코트 테마 값(마루·LED 전광판·글꼴)도 `docs/index.html`과 `scraper/pages.mjs`(`THEME_CSS`·`FONT_LINKS`) 두 곳에 있다. 고치면 둘 다 고친다.
 - `docs/index.html`의 `<!--ssr-->`~`<!--/ssr-->` 사이는 수집 봇이 덮어쓴다. 손대지 않는다.
 - 수집 때 생성되는 것은 직접 고치지 않는다: `docs/data.json`, `docs/places.json`, `docs/r/`, `docs/p/`, `docs/g/`, `docs/my/index.html`, `docs/sitemap.xml`, `docs/rss.xml`, `data/`. 고칠 땐 생성 코드(`pages.mjs` 등)를 고친다.
 - 삭제 금지: `docs/CNAME`, `docs/googlecb623fa08c886315.html`, `docs/bddf8836eb999e8a6435b6d7f52cc56e.txt`

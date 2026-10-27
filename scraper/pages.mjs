@@ -44,12 +44,52 @@ function dedupe(rows) {
   });
   return rows.filter(p => !drop.has(p.key));
 }
+// 10-27 코트 테마 — 첫 화면(docs/index.html '코트 테마')과 같은 모양: 마루 바닥·하프코트 머리·LED 전광판 시각 칸·붓글씨 제목
+const FONT_LINKS = ['https://fonts.googleapis.com/css2?family=East+Sea+Dokdo&display=swap', 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css', 'https://fonts.googleapis.com/css2?family=DotGothic16&display=swap&text=0123456789%3A~-'].map(h => `<link rel="stylesheet" href="${h}" media="print" onload="this.media='all'">`).join('');
+const THEME_CSS = `
+:root{--f-display:"East Sea Dokdo","Pretendard Variable",Pretendard,sans-serif;--f-body:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;--f-led:"DotGothic16",var(--f-body);
+  --bg:#E9D4B0;--line:#DCC7A3;--card-line:#EFEAE2;--wood-seam:rgba(105,62,15,.13);--wood-grain:rgba(120,75,25,.05);--wood-grain2:rgba(255,255,255,.07);
+  --sb:#121315;--sb-edge:#2B2D31;--led:#FFB23E;--led-glow:rgba(255,150,30,.55);--led-sub:#D99A3A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1A160F;--line:#30291E;--wood-seam:rgba(0,0,0,.5);--wood-grain:rgba(255,210,140,.03);--wood-grain2:rgba(0,0,0,.14);--sb:#08090A;--sb-edge:#26282C}}
+:root[data-theme="dark"]{--bg:#1A160F;--line:#30291E;--wood-seam:rgba(0,0,0,.5);--wood-grain:rgba(255,210,140,.03);--wood-grain2:rgba(0,0,0,.14);--sb:#08090A;--sb-edge:#26282C}
+body{font-family:var(--f-body);background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--wood-seam) 71px 72px),repeating-linear-gradient(90deg,var(--wood-grain2) 0 6px,transparent 6px 17px,var(--wood-grain) 17px 21px,transparent 21px 36px)}
+.hdr{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='.2' stroke-width='4'%3E%3Cpath d='M400 30H300a70 70 0 0 0 0 140h100'/%3E%3Cpath d='M400 70h-90v60h90'/%3E%3Ccircle cx='310' cy='100' r='30'/%3E%3Cpath d='M400 -10C230 -10 190 60 190 100s40 110 210 110'/%3E%3C/g%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:auto 150%}
+.hdr .brand b{font:400 32px/1 var(--f-display);letter-spacing:0}
+@media (min-width:720px){.hdr .brand b{font-size:38px}}
+@media (max-width:719px),(orientation:landscape) and (max-height:500px){.hdr .brand b{font-size:28px}}
+h2{font:400 26px/1.2 var(--f-display);border-bottom:0;display:inline-block;box-shadow:inset 0 -3px 0 var(--btn);padding-bottom:2px} h2 small{font:500 13px var(--f-body)}
+.trend h2,.links h2{font:700 16px/1.4 var(--f-body);box-shadow:none;display:block}
+ul{display:block}
+li{position:relative;display:block;padding:12px 14px 12px 92px;min-height:56px;overflow:hidden}
+li .t{position:absolute;left:0;top:0;bottom:0;width:78px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:6px 4px;box-sizing:border-box;background:var(--sb);background-image:radial-gradient(circle,rgba(255,255,255,.06) .6px,transparent 1px);background-size:4px 4px;box-shadow:inset -1px 0 0 var(--sb-edge);font:400 20px/1.15 var(--f-led);color:var(--led);text-shadow:0 0 4px var(--led-glow),0 0 12px var(--led-glow);letter-spacing:.02em;padding-top:6px}
+li .t i{font:400 13px/1.2 var(--f-led);font-style:normal;color:var(--led-sub);text-shadow:0 0 5px rgba(255,150,30,.3);margin-top:3px}
+li .t.off{color:var(--led);text-shadow:none} li .t.off b{opacity:.35;font-weight:400} li .t.off i{font:700 11px/1.3 var(--f-body);color:#E8E1D4;text-shadow:none;white-space:nowrap}
+li .t b{font-weight:400}
+li .t em{font:700 11px/1.2 var(--f-body);font-style:normal;color:#FF9B8F;text-shadow:none;margin-top:3px;white-space:nowrap}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) li .t{color:var(--led)}}
+:root[data-theme="dark"] li .t{color:var(--led)}
+@media (max-width:359px){li{padding-left:76px}li .t{width:64px;font-size:17px}}
+.c .when{font:400 30px/1.2 var(--f-display);letter-spacing:0}
+`;
+// 첫 화면 docs/index.html의 cleanTitle과 같은 정규식. 단 지역 페이지 카드엔 지역 꼬리표가 없어서 앞머리 [지역]은 남기고 날짜·시간만 뗌. 정규식을 고치면 둘 다 고칠 것
+const BR=/^\s*(?:[\[(【][^\]\)】]{1,24}[\]\)】]|[\[(【][^\]\)】]{1,24}(?=\s*[\[(【]))\s*[·,/\-~]?\s*/;
+const DT=/^\s*(?:(?:(?:20)?\d{2}\s*[년.\/-]\s*)?\d{1,2}\s*[\/.월-]\s*\d{1,2}(?!\s*[시:~])\s*(?:일(?!요))?\.?[\s-]*(?:\([^)]{1,6}\)|[월화수목금토일]\s*요일|[월화수목금토일](?![가-힣]))?|\d{1,2}\s*일\s*(?:\([^)]{1,6}\)|[월화수목금토일]요일|(?=\s*(?:오전|오후|저녁|\d)))|오늘|내일|모레|이번\s*주\s*[월화수목금토일]요일?|(?:이번|다음)\s*[월화수목금토일]요일?|[월화수목금토일]요일)\s*[,.·\-~/]?\s*/;
+const H=String.raw`(?:(?:오전|오후|저녁|아침|낮|밤|새벽)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)`;
+const TM=new RegExp(String.raw`^\s*(?:${H}\s*(?:(?:~|-|–|부터|에서|\s)\s*${H}?\s*(?:까지)?)?|(?:오전|오후|저녁|아침|밤|새벽)?\s*\d{1,2}\s*(?:~|-|–|부터)\s*(?:(?:오전|오후|저녁|밤)\s*)?\d{1,2}\s*(?::\s*\d{2}|시(?!간)\s*(?:\d{1,2}\s*분|\d{2}(?!\s*시)|반)?)?\s*(?:까지)?)\s*(?:\(\s*\d+\s*시간\s*\d*분?\s*\))?\s*[,.·\-~/]?\s*`);
+function cleanTitle(p) {
+  const o = unent(p.title); let head = '', t = o;
+  for (let i = 0; i < 3; i++) { const m = t.match(BR); if (!m || !m[0].trim()) break; head += m[0].trim() + ' '; t = t.slice(m[0].length); }
+  if (p.date) for (let i = 0; i < 2; i++) { const n = t.replace(DT, ''); if (n === t) break; t = n; }
+  if (p.start) t = t.replace(TM, '');
+  t = t.replace(/^[\s,.·\-~/:!]+/, '').trim();
+  return t.length < 5 ? o : (head + t).trim();
+}
 const CAFE_NOTE = '<p class="cm">글을 누르면 카페 원문으로 가요(카페 회원만 볼 수 있어요): <a href="https://m.cafe.daum.net/dongarry" target="_blank" rel="noopener">[BDR]동아리농구방</a> · <a href="https://m.cafe.naver.com/cornrow" target="_blank" rel="noopener">NSB 농심카페</a></p>';
 function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, links, cta, home, trend = '', robots = '', empty = '', extra = '', place = null }) {
   const url = `${SITE}${path}`;
   const groups = new Map();
   for (const p of posts) { const k = p.date || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); }
-  const list = posts.length ? [...groups].map(([d, ps]) => `<h2>${esc(dayLabel(d, today))} <small>${ps.length}건</small></h2><ul>${ps.map(p => `<li><span class="t">${esc(p.start || p.slot || '시간 미정')}</span><a href="${esc(p.url)}" rel="nofollow noopener" target="_blank">${esc(unent(p.title))}</a><span class="m">${home && p.region2 !== home ? `<b class="near">근처 ${esc(where(p))}</b> · ` : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방'}</b> · ${BOARD_NAME[p.board] || '게스트'}</span></li>`).join('')}</ul>`).join('')
+  const list = posts.length ? [...groups].map(([d, ps]) => `<h2>${esc(dayLabel(d, today))} <small>${ps.length}건</small></h2><ul>${ps.map(p => `<li>${p.start ? `<span class="t"><b>${esc(p.start)}</b><i>${p.end ? '~' + esc(p.end) : ''}</i>${p.amb ? '<em title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전·저녁?</em>' : ''}</span>` : `<span class="t off"><b>--:--</b><i>${esc(p.slot ? p.slot + ' 미정' : '시간 미정')}</i></span>`}<a href="${esc(p.url)}" rel="nofollow noopener" target="_blank" title="${esc(unent(p.title))}">${esc(cleanTitle(p))}</a><span class="m">${home && p.region2 !== home ? `<b class="near">근처 ${esc(where(p))}</b> · ` : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방'}</b> · ${BOARD_NAME[p.board] || '게스트'}</span></li>`).join('')}</ul>`).join('')
     : empty || '<p class="empty">지금은 모집 글이 없어요. 가까운 지역이나 전체 목록을 확인해 보세요.</p>';
   const ld = [{ '@context': 'https://schema.org', '@type': 'WebSite', name: '훕게스트', alternateName: ['hoopguest', '농구 게스트 모아보기'], url: SITE + '/' },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.map(([n, u], i) => ({ '@type': 'ListItem', position: i + 1, name: n, item: SITE + u })) },
@@ -62,7 +102,7 @@ function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, lin
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:site_name" content="훕게스트">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}/og.png">
-<meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" media="print" onload="this.media=\'all\'">
+<meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${FONT_LINKS}
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
 <script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
@@ -143,7 +183,7 @@ li{border-color:var(--card-line,#EFEAE2);border-radius:20px;padding:12px 14px}
 .hdr .w{padding-top:6px;padding-bottom:6px}.hdr .brand{min-height:36px}.hdr .brand img{width:26px;height:26px}.hdr .brand b{font-size:21px}
 nav.bc{margin:4px 0 0}h1{font-size:22px;line-height:1.25;margin:0 0 4px}.intro{font-size:14px;line-height:1.5;margin:0 0 10px}
 h2{margin-top:16px}}
-</style>
+${THEME_CSS}</style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}')}</script>
 </head><body>
 <header class="hdr"><div class="w"><a class="brand" href="/" aria-label="훕게스트 첫 화면"><img src="/ball.svg" alt="" width="30" height="30"><b>훕게스트</b><i>모아보기</i></a></div></header>
@@ -155,7 +195,7 @@ h2{margin-top:16px}}
 ${posts.length ? CAFE_NOTE : ''}${list}
 ${trend}
 <section class="links">${links.map(([t, ls]) => `<h2>${esc(t)}</h2><p>${ls.map(([n, u]) => `<a href="${u}">${esc(n)}</a>`).join('')}</p>`).join('')}</section>
-<footer>다음카페 [BDR]동아리농구방과 네이버 카페 NSB 농심카페(운영진 허락)의 공개 글 제목만 모아 30분마다 갱신하는 비공식 사이트입니다. 비용·장소·연락처는 원문에서 확인하세요. 마지막 갱신: ${esc(new Date(Date.parse(updated) + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '))} (KST) · <a href="/guide/">농구 게스트 이용 가이드</a></footer>
+<footer>다음카페 [BDR]동아리농구방과 네이버 카페 NSB 농심카페(운영진 허락)의 공개 글 제목만 모아 10분마다 확인해 갱신하는 비공식 사이트입니다. 비용·장소·연락처는 원문에서 확인하세요. 마지막 갱신: ${esc(new Date(Date.parse(updated) + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '))} (KST) · <a href="/guide/">농구 게스트 이용 가이드</a></footer>
 </main></body></html>`;
 }
 
@@ -229,7 +269,7 @@ function postPage(p, today) {
 <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:site_name" content="훕게스트">
 <meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(t)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" media="print" onload="this.media=\'all\'">
+<meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${FONT_LINKS}
 <script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 :root{--bg:#FFFDF6;--text:#0E0E10;--sub:#4E4E55;--line:#0E0E10;--card:#fff}
@@ -302,7 +342,7 @@ li{border-color:var(--card-line,#EFEAE2);border-radius:20px;padding:12px 14px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) li .t{color:var(--btn)}:root:not([data-theme="light"]) .srcm.nv{color:#5FD38A}:root:not([data-theme="light"]) .srcm.dm{color:#FF8A7E}:root:not([data-theme="light"]) li{border-color:var(--line)}}
 :root[data-theme="dark"] li .t{color:var(--btn)}:root[data-theme="dark"] .srcm.nv{color:#5FD38A}:root[data-theme="dark"] .srcm.dm{color:#FF8A7E}:root[data-theme="dark"] li{border-color:var(--line)}
 .c .when{font:400 24px/1.25 "Black Han Sans","Noto Sans KR",sans-serif;letter-spacing:.01em}
-</style>
+${THEME_CSS}</style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}');gtag('event','shared_post_view',{post_id:'${esc(p.key)}'})}</script>
 </head><body>
 <header class="hdr"><div class="w"><a class="brand" href="/" aria-label="훕게스트 첫 화면"><img src="/ball.svg" alt="" width="30" height="30"><b>훕게스트</b><i>모아보기</i></a></div></header>
@@ -317,7 +357,7 @@ ${navHtml}</div>
 ${p.src === 'naver' ? '<p class="cm">원문은 네이버 카페 NSB 농심카페 회원만 볼 수 있어요. 회원이 아니면 <a href="https://m.cafe.naver.com/cornrow" rel="noopener">카페에 먼저 가입</a>해 주세요.</p>' : '<p class="cm">원문은 다음 카페 [BDR]동아리농구방 회원만 볼 수 있어요. 회원이 아니면 <a href="https://m.cafe.daum.net/dongarry" rel="noopener">카페에 먼저 가입</a>해 주세요.</p>'}
 <a class="b b2" href="${esc(more)}">${esc(p.region2 ? place : p.region1 || '수도권')} 다른 모집 글 더 보기</a>
 <script>(function(){var d=${JSON.stringify(p.date || '')},s=${JSON.stringify(p.start || '')},e=${JSON.stringify(p.end || '')};if(!d||!s||${p.closed || (p.date && p.date < today) ? 'true' : 'false'})return;function t(hm,add){var a=d.split('-').map(Number),b=hm.split(':').map(Number);return Date.UTC(a[0],a[1]-1,a[2],b[0]+(add||0),b[1])-324e5;}var st=t(s),en=e?t(e,e<s?24:0):st+72e5,n=Date.now(),o=document.getElementById('over');if(n>=en){o.textContent='이미 끝난 일정이에요. 아래에서 다른 글을 찾아보세요.';o.hidden=false;document.getElementById('go').textContent='카페 원문 보기';}else if(n>=st){o.textContent='이미 시작한 일정이에요. 늦참이 되는지 원문에서 확인하세요.';o.hidden=false;}})();</script>
-<p class="f">훕게스트는 다음카페 [BDR]동아리농구방과 네이버 NSB 농심카페(운영진 허락)의 농구 게스트·픽업게임·교류전 모집 글 제목을 모아 30분마다 갱신하는 비공식 사이트예요. 지역·날짜·시간대로 골라 보고, 새 글 알림도 받을 수 있어요.</p>
+<p class="f">훕게스트는 다음카페 [BDR]동아리농구방과 네이버 NSB 농심카페(운영진 허락)의 농구 게스트·픽업게임·교류전 모집 글 제목을 모아 10분마다 확인해 갱신하는 비공식 사이트예요. 지역·날짜·시간대로 골라 보고, 새 글 알림도 받을 수 있어요.</p>
 </main></body></html>`;
 }
 
@@ -479,7 +519,7 @@ export async function buildPages(data) {
       out.push([`/r/${s1}/${s}/`, page({ robots: thin ? 'noindex,follow' : '',
         path: `/r/${s1}/${s}/`, today, updated,
         title: `${nm} 농구 게스트 구인·구함 · 픽업게임 · 교류전 | 훕게스트`,
-        desc: `${dayLead(mine)}${nm} 농구 게스트 구인·구함·픽업게임·교류전 모집 글을 날짜·시간순으로 모아봐요.${mine.length ? ` 지금 ${mine.length}건` : ''}${mine.length < 3 && nearby.length ? `${mine.length ? ',' : ' 지금'} 근처 지역 ${Math.min(nearby.length, 10)}건` : ''}. 30분마다 갱신.`,
+        desc: `${dayLead(mine)}${nm} 농구 게스트 구인·구함·픽업게임·교류전 모집 글을 날짜·시간순으로 모아봐요.${mine.length ? ` 지금 ${mine.length}건` : ''}${mine.length < 3 && nearby.length ? `${mine.length ? ',' : ' 지금'} 근처 지역 ${Math.min(nearby.length, 10)}건` : ''}. 10분마다 확인해 갱신.`,
         h1: `${nm} 농구 게스트 · 픽업게임`,
         intro: mine.length >= 3 ? `${nm}에서 지금 모집 중인 농구 게스트·픽업게임·교류전 글 ${mine.length}건이에요.` : mine.length ? `${nm} 글 ${mine.length}건과 가까운 지역 글을 함께 보여 드려요.` : `${nm}에는 지금 모집 글이 없어요. 가까운 지역 글을 대신 보여 드려요.`,
         posts: mine.length >= 3 ? mine : [...mine, ...nearby.slice(0, 10).sort((x, y) => (x.date || '9999').localeCompare(y.date || '9999') || (x.start || '99').localeCompare(y.start || '99'))], // 근처 글은 10건까지만(이웃 지역 페이지끼리 내용이 겹치지 않게)
@@ -500,7 +540,7 @@ export async function buildPages(data) {
     out.push([g.path, page({ robots: gThin ? 'noindex,follow' : '',
       path: g.path, today, updated,
       title: `${g.name} 농구 게스트 · 픽업게임 (${area}) | 훕게스트`,
-      desc: `${area} ${g.name}에서 열리는 농구 게스트 구함·픽업게임·교류전 모집 글을 모아봐요. ${spanWord(today, hist.since)} ${g.rows.length}건${mine.length ? `, 지금 ${mine.length}건 모집 중` : ''}. 30분마다 갱신.`,
+      desc: `${area} ${g.name}에서 열리는 농구 게스트 구함·픽업게임·교류전 모집 글을 모아봐요. ${spanWord(today, hist.since)} ${g.rows.length}건${mine.length ? `, 지금 ${mine.length}건 모집 중` : ''}. 10분마다 확인해 갱신.`,
       h1: `${g.name} 농구 게스트 · 픽업게임`,
       intro: `${area} ${g.name}에서 열리는 농구 게스트·픽업게임·교류전 모집 글이에요. ${spanWord(today, hist.since)} 동안 ${g.rows.length}건이 올라왔어요.`,
       posts: mine,
