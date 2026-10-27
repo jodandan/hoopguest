@@ -64,6 +64,14 @@ try {
     if (tabs.length) ok(`[${vw.name}] 게시판 탭 ${tabs.length}개 확인`);
     else fail(`[${vw.name}] 게시판 탭을 찾지 못함`);
 
+    // 부품 모음(/design/)이 첫 화면 CSS를 불러와 카드를 그리는지
+    await page.goto(BASE + '/design/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForFunction(() => document.querySelectorAll('#cards article').length && document.getElementById('appcss')?.textContent.length > 1000, null, { timeout: 10000 }).catch(() => {});
+    const ds = await page.evaluate(() => ({ cards: document.querySelectorAll('#cards article').length, css: document.getElementById('appcss')?.textContent.length || 0, over: document.documentElement.scrollWidth > innerWidth + 1 }));
+    if (!ds.cards || ds.css < 1000) fail(`[${vw.name}] 부품 모음 페이지가 비어 있음(카드 ${ds.cards}, CSS ${ds.css}자)`);
+    else if (ds.over) fail(`[${vw.name}] 부품 모음 페이지가 가로로 넘침`);
+    else ok(`[${vw.name}] 부품 모음 카드 ${ds.cards}개`);
+
     // 마이페이지도 스크립트 오류 없이 열리는지
     await page.goto(BASE + '/my/', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(1500);

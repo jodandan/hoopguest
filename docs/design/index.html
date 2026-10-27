@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>훕게스트 부품 모음</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="/ball.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=East+Sea+Dokdo&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sedgwick+Ave+Display&display=swap&text=Street%203on3%20%C2%B7%20Pick-up" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap&text=0123456789%3A~-" rel="stylesheet">
+<script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
+<!-- 첫 화면(/index.html)의 <style>을 그대로 불러와 씀 → 첫 화면 CSS를 고치면 이 페이지도 같이 바뀜. 아래 마크업은 index.html의 card()·탭·날짜 머리 템플릿과 같은 모양 -->
+<style id="appcss"></style>
+<style>
+.dsx{padding:16px 0 60px}
+.dsx>h1{font:400 40px/1.1 var(--f-display);margin:8px 0 2px}
+.dsx>p.lead{color:var(--sub);margin:0 0 12px;font-size:var(--fs-sm)}
+.dsx section.blk{margin:28px 0}
+.dsx h2.bh{font:400 28px/1.1 var(--f-display);margin:0 0 4px}
+.dsx p.note{color:var(--sub);font-size:var(--fs-sm);margin:0 0 10px}
+.dsx .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.dsx .sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.dsx .sw div{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);font-size:12px}
+.dsx .sw i{display:block;height:34px}
+.dsx .sw span{display:block;padding:5px 7px;color:var(--sub);word-break:break-all}
+.dsx .lbl2{font-size:12px;color:var(--sub);margin:12px 0 4px}
+.dsx .fonts p{margin:4px 0}
+.dsx .themesw{position:sticky;top:0;z-index:5;display:flex;gap:6px;justify-content:flex-end;padding:8px 0;background:var(--bg)}
+</style>
+</head>
+<body>
+<div class="wrap dsx">
+  <div class="themesw"><button class="chip sm" type="button" data-t="light">밝게</button><button class="chip sm" type="button" data-t="dark">어둡게</button><button class="chip sm" type="button" data-t="">기기 설정</button></div>
+  <h1>훕게스트 부품 모음</h1>
+  <p class="lead">첫 화면 CSS를 그대로 불러와 부품을 한곳에 모았어요. 규칙은 저장소의 DESIGN.md에 있어요. 검색 엔진에 노출되지 않는 내부용 페이지예요.</p>
+
+  <section class="blk"><h2 class="bh">색</h2><p class="note">:root 변수 값(지금 테마 기준)</p><div class="sw" id="sw"></div></section>
+
+  <section class="blk fonts"><h2 class="bh">글꼴</h2>
+    <p class="note">붓글씨(동해독도)는 16px 미만에 쓰지 않아요.</p>
+    <p style="font:400 40px/1.1 var(--f-display)">훕게스트 제목 · 동해독도</p>
+    <p style="font:700 16px/1.5 var(--f-body)">본문 Pretendard — 서울·경기·인천 농구 게스트 모집</p>
+    <p style="font:400 30px/1 'DotGothic16',monospace;color:var(--led)">19:00 ~21:00</p>
+    <p style="font:400 22px/1.2 var(--f-tag)">Street 3on3 · Pick-up</p>
+  </section>
+
+  <section class="blk"><h2 class="bh">게시판 탭</h2><p class="note">숫자는 LED 배지. 글이 2건 이하면 <code>few</code>(흐리게)</p>
+    <div class="tabs" id="tabs" role="tablist" aria-label="예시 탭">
+      <button class="tab" type="button" role="tab" aria-selected="true">게스트 <b class="n">182</b></button>
+      <button class="tab" type="button" role="tab" aria-selected="false">픽업게임 <b class="n">41</b></button>
+      <button class="tab few" type="button" role="tab" aria-selected="false">연습경기 <b class="n">2</b></button>
+    </div>
+  </section>
+
+  <section class="blk"><h2 class="bh">버튼·칩</h2>
+    <div class="row">
+      <button class="chip" type="button">기본 칩</button>
+      <button class="chip" type="button" aria-pressed="true">선택된 칩</button>
+      <button class="chip sm primary" type="button">알림 받기</button>
+      <button class="chip sm" type="button">괜찮아요</button>
+    </div>
+    <div class="lbl2">지금 갈 수 있는 곳 (보통 / 해당 글 없음)</div>
+    <div class="bar" style="display:grid;gap:8px">
+      <button class="nowbtn" type="button" aria-pressed="false"><span><i class="ldot" aria-hidden="true"></i>지금 갈 수 있는 곳</span><small>3곳</small></button>
+      <button class="nowbtn empty" type="button" aria-pressed="false"><span><i class="ldot" aria-hidden="true"></i>지금 갈 수 있는 곳</span><small>지금은 없어요</small></button>
+    </div>
+  </section>
+
+  <section class="blk"><h2 class="bh">꼬리표</h2>
+    <div class="tags row" style="position:static">
+      <span class="newdot" title="새 글"><span class="sr">새 글</span></span>
+      <span class="tag soon">30분 뒤 시작</span><span class="tag soon calm">2시간 뒤</span><span class="tag live">진행 중</span>
+      <span class="tag">서울 구로</span><span class="tag c">생수 제공</span><span class="tag g">무료</span><span class="tag x">마감</span>
+    </div>
+  </section>
+
+  <section class="blk"><h2 class="bh">날짜 머리 + 카드(전광판 칸)</h2>
+    <p class="note">시간 칸 상태: 시작~끝 / 오전·저녁 모호 / 시간 미정 / 시간대만 앎 / 마감 / 읽음 / 저장</p>
+    <div id="list">
+      <section class="dayg"><h2 class="dayh"><span class="day"><b>오늘 <i class="dn">10/27</i> 화</b> <small>6건</small></span></h2>
+        <div id="cards"></div>
+      </section>
+    </div>
+  </section>
+
+  <section class="blk"><h2 class="bh">알림 제안 · 공지 띠</h2>
+    <div class="nudge" style="position:static;display:block;transform:none;opacity:1"><p>다음엔 다시 찾아보지 않아도 돼요. <b>지금 고른 조건</b>으로 새 글이 올라오면 알려드릴까요?</p><div class="acts"><button class="chip sm primary" type="button">알림 받기</button><button class="chip sm" type="button">괜찮아요</button></div></div>
+    <div class="notice" style="margin-top:12px">BDR 동방이 열렸어요. <a href="#">동방 바로가기</a></div>
+  </section>
+</div>
+<script>
+(async () => {
+  const H = document.documentElement;
+  document.querySelectorAll('.themesw [data-t]').forEach(b => b.onclick = () => { const t = b.dataset.t; if (t) H.dataset.theme = t; else delete H.dataset.theme; paintSw(); });
+  // 첫 화면 CSS 그대로 가져오기
+  try {
+    const src = await (await fetch('/index.html', { cache: 'no-cache' })).text();
+    const doc = new DOMParser().parseFromString(src, 'text/html');
+    document.getElementById('appcss').textContent = [...doc.querySelectorAll('head style')].map(s => s.textContent).join('\n');
+  } catch (e) { document.querySelector('.lead').textContent = '첫 화면 CSS를 불러오지 못했어요: ' + e.message; }
+  const CHEV = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const card = (c, time, tags, title, star = false) => `<article class="card${c}">
+      <div class="time">${time}</div>
+      <div class="body"><div class="tags">${tags}</div>
+        <a class="title" href="#">${title}</a>
+        <div class="sub"><span>${c.includes('seen') ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm dm">다음 BDR</b> · 12분 전 · 조회 31</span></div><div class="cacts"></div></div>
+      <button class="star" type="button" aria-pressed="${star}">${star ? '★' : '☆'}</button><button class="more" type="button" aria-expanded="false">${CHEV}</button>
+      <span class="swipe" aria-hidden="true">★<br>저장</span></article>`;
+  const S = (s, e, amb) => `<div class="s">${s}</div><div class="e">${e ? '~' + e : ''}</div>${amb ? '<div class="amb">오전·<wbr>저녁?</div>' : ''}`;
+  const OFF = slot => `<div class="s off" aria-hidden="true">--:--</div><div class="unk">${slot ? `<b>${slot}</b> 미정` : '시간 미정'}</div>`;
+  document.getElementById('cards').innerHTML = [
+    card(' fresh', S('19:00', '21:00'), '<span class="newdot"><span class="sr">새 글</span></span><span class="tag soon">30분 뒤 시작</span><span class="tag">서울 구로</span><span class="tag c">생수 제공</span>', '팀 파비앙스 게스트 초대합니다(전자점수판)'),
+    card('', S('7:00', '9:00', true), '<span class="tag">경기 수원</span>', '수원보훈재활체육센터 게스트 2명'),
+    card('', OFF(''), '<span class="tag">인천 부평</span><span class="tag g">무료</span>', '부평다목적체육센터 픽업게임 같이 해요'),
+    card('', OFF('저녁'), '<span class="tag">서울 강서</span>', '공항고 체육관 게스트 구합니다'),
+    card(' seen', S('20:30', '22:30'), '<span class="tag">경기 용인</span>', '마스터욱 바스켓볼센터 5:5 게스트'),
+    card(' closed', S('18:00', '20:00'), '<span class="tag">경기 시흥</span><span class="tag x">마감</span>', '시흥 정왕 체육관 게스트 마감'),
+    card('', S('21:00', '23:00'), '<span class="tag live">진행 중</span><span class="tag">서울 관악</span>', '저장한 글 예시', true),
+  ].join('');
+  // 색 견본: 첫 화면 CSS의 :root 변수 이름을 모아 지금 값으로 칠함
+  const names = [...new Set((document.getElementById('appcss').textContent.match(/--[\w-]+(?=\s*:)/g) || []))].filter(n => !/^--(fs|r|f|sp)-/.test(n));
+  function paintSw() {
+    const cs = getComputedStyle(H);
+    document.getElementById('sw').innerHTML = names.map(n => { const v = cs.getPropertyValue(n).trim(); return /^(#|rgb|hsl)/.test(v) ? `<div><i style="background:${v}"></i><span>${n}<br>${v}</span></div>` : ''; }).join('');
+  }
+  paintSw();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', paintSw);
+})();
+</script>
+</body></html>
