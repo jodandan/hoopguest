@@ -184,11 +184,13 @@ li{border-color:var(--card-line,#EFEAE2);border-radius:20px;padding:12px 14px}
 .hdr .w{padding-top:6px;padding-bottom:6px}.hdr .brand{min-height:36px}.hdr .brand img{width:26px;height:26px}.hdr .brand b{font-size:21px}
 nav.bc{margin:4px 0 0}h1{font-size:22px;line-height:1.25;margin:0 0 4px}.intro{font-size:14px;line-height:1.5;margin:0 0 10px}
 h2{margin-top:16px}}
+.notice{position:relative;margin:12px 0 4px;padding:10px 40px 10px 12px;background:var(--sb);color:#F2EDE4;border-radius:14px;font-size:14px;line-height:1.5}.notice a{color:var(--led);font-weight:700}.noticex{position:absolute;top:2px;right:2px;width:36px;height:36px;background:none;border:0;color:#F2EDE4;font-size:16px;cursor:pointer}
 ${THEME_CSS}</style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}');document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="cafe.daum.net"],a[href*="cafe.naver.com"]');if(a)gtag('event','open_post',{page_type:'${path.startsWith('/g/') ? 'gym' : 'region'}',transport_type:'beacon'})});}</script>
 </head><body>
 <header class="hdr"><div class="w"><a class="brand" href="/" aria-label="훕게스트 첫 화면"><img src="/ball.svg" alt="" width="30" height="30"><b>훕게스트</b><i>모아보기</i></a></div></header>
 <main class="w">
+<div class="notice" id="notice" hidden></div>
 <nav class="bc" aria-label="위치">${crumbs.map(([n, u], i) => i === crumbs.length - 1 ? esc(n) : `<a href="${u}">${esc(n)}</a> › `).join('')}</nav>
 <h1>${esc(h1)}</h1>
 <p class="intro">${esc(intro)}</p>
@@ -197,6 +199,7 @@ ${posts.length ? CAFE_NOTE : ''}${list}
 ${trend}
 <section class="links">${links.map(([t, ls]) => `<h2>${esc(t)}</h2><p>${ls.map(([n, u]) => `<a href="${u}">${esc(n)}</a>`).join('')}</p>`).join('')}</section>
 <footer>다음카페 [BDR]동아리농구방과 네이버 카페 NSB 농심카페(운영진 허락)의 공개 글 제목만 모아 10분마다 확인해 갱신하는 비공식 사이트입니다. 비용·장소·연락처는 원문에서 확인하세요. 마지막 갱신: ${esc(new Date(Date.parse(updated) + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '))} (KST) · <a href="/guide/">농구 게스트 이용 가이드</a></footer>
+<script>fetch('/notice.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null}).then(function(n){var el=document.getElementById('notice');if(!el||!n||!n.on||!n.text)return;try{if(JSON.parse(localStorage.getItem('bdr.noticeX')||'""')===n.id)return}catch(e){}var e=function(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};el.innerHTML='<span>'+e(n.text)+'</span>'+(n.link?' <a href="'+e(n.link)+'" target="_blank" rel="noopener">'+e(n.linkText||'바로가기')+'</a>':'')+'<button class="noticex" type="button" aria-label="공지 닫기">✕</button>';el.hidden=false;el.querySelector('.noticex').onclick=function(){el.hidden=true;try{localStorage.setItem('bdr.noticeX',JSON.stringify(n.id))}catch(e){}};if(window.gtag)gtag('event','notice',{id:n.id,act:'view',page_type:'sub'})}).catch(function(){})</script>
 </main></body></html>`;
 }
 
