@@ -8,7 +8,7 @@ const DOCS = new URL('../docs/', import.meta.url);
 const LASTMOD = new URL('../data/lastmod.json', import.meta.url); // 페이지별 마지막으로 내용이 바뀐 날(사이트맵 lastmod용)
 const HIST = new URL('../data/history.json', import.meta.url); // 지역 페이지 '최근 경향' 통계용 누적 기록(공개 안 됨)
 const GA_ID = 'G-0DWSLR5007';
-const GUIDE_UPDATED = '2026-10-25'; // docs/guide/index.html(손으로 쓰는 이용 가이드)를 고친 날 — 고치면 같이 바꿀 것
+const GUIDE_UPDATED = '2026-10-27'; // docs/guide/index.html(손으로 쓰는 이용 가이드)를 고친 날 — 고치면 같이 바꿀 것
 
 export const R1 = { 서울: 'seoul', 경기: 'gyeonggi', 인천: 'incheon' };
 // [표시명(데이터 region2), 슬러그, 위도, 경도]
@@ -101,7 +101,7 @@ function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, lin
 <meta name="description" content="${esc(desc)}">${robots ? `<meta name="robots" content="${robots}">` : ''}
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:site_name" content="훕게스트">
-<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}/og.png">
+<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}/og.png?v=2">
 <meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${FONT_LINKS}
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
 <script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
@@ -267,7 +267,7 @@ function postPage(p, today) {
 <meta name="description" content="${esc(desc)}"><meta name="robots" content="noindex,follow">
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:site_name" content="훕게스트">
-<meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(t)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}/og.png">
+<meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(t)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}/og.png?v=2">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${FONT_LINKS}
 <script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
