@@ -31,7 +31,7 @@
 <meta property="og:title" content="훕게스트 — 농구 게스트·픽업게임·교류전 한눈에">
 <meta property="og:description" content="서울·경기·인천 농구 게스트 구함·픽업게임·교류전 글을 지역·날짜·시간대별로 한눈에">
 <meta property="og:url" content="https://hoopguest.kro.kr/">
-<meta property="og:image" content="https://hoopguest.kro.kr/og.png">
+<meta property="og:image" content="https://hoopguest.kro.kr/og.png?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="훕게스트">
@@ -407,7 +407,12 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 .fpanel{--fp:color-mix(in srgb,var(--card) 72%,var(--bg));margin-top:10px;padding:8px 12px 6px;border-radius:var(--r-lg);background:var(--fp);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent-strong) 30%,transparent)}
 .fpanel .lbl{font:400 var(--fs-md)/1 var(--f-display);color:var(--accent);background:var(--fp);box-shadow:6px 0 6px -2px var(--fp);-webkit-backdrop-filter:none;backdrop-filter:none}
 .fpanel .chip[aria-pressed="true"]:not(.all){background:var(--accent-strong);border-color:var(--accent-strong);color:var(--on-accent)}
-.daystrip button small{font-family:var(--f-led);color:var(--led)}
+.daystrip button small{font-family:var(--f-led);color:var(--text);background:color-mix(in srgb,var(--text) 9%,transparent);text-shadow:none}
+.daystrip button[aria-current="true"] small{color:var(--chip-on-text);background:color-mix(in srgb,var(--chip-on-text) 18%,transparent)}
+/* 위쪽을 조용히: '지금 갈 수 있는 곳'이 비었을 땐 검은 띠 대신 얇은 점선 한 줄 */
+.nowbtn.empty{background:transparent;background-image:none;border:1px dashed var(--line2);box-shadow:none;min-height:36px;padding-top:6px;padding-bottom:6px;color:var(--sub)}
+.nowbtn.empty span{color:var(--sub)}.nowbtn.empty small{color:var(--sub);text-shadow:none;font-weight:500}
+.nowbtn.empty .ldot{background:var(--muted);box-shadow:none}
 /* 글꼴 — 제목은 붓글씨(동해독도, 글자가 작게 그려져 약 1.35배), 본문 Pretendard, 영문 포인트는 그라피티 */
 .brand h1{font-size:40px;line-height:1;letter-spacing:0}
 @media (min-width:720px){.brand h1{font-size:46px}}
@@ -1193,8 +1198,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     const a = e.target.closest('a.title');
     if (a && cafeHintFirst(e, a)) return;
     const cb = e.target.closest('.cafebox a');
-    if (cb) { const src = cb.closest('.cafebox').dataset.src; cafeHintDone(src); track('cafe_hint', { step: cb.dataset.act, post_id: cb.dataset.key, cafe: src }); if (cb.dataset.act === 'open') markSeen(cb.dataset.key); setTimeout(render, 300); return; }
-    if (a) { markSeen(a.dataset.key); setTimeout(render, 300); const p = byKey(a.dataset.key); track('open_post', { post_id: a.dataset.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); return; }
+    if (cb) { const src = cb.closest('.cafebox').dataset.src; cafeHintDone(src); track('cafe_hint', { step: cb.dataset.act, post_id: cb.dataset.key, cafe: src }); if (cb.dataset.act === 'open') { markSeen(cb.dataset.key); const p = byKey(cb.dataset.key); if (p) track('open_post', { page_type: 'home', via: 'cafe_hint', post_id: p.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); } setTimeout(render, 300); return; }
+    if (a) { markSeen(a.dataset.key); setTimeout(render, 300); const p = byKey(a.dataset.key); track('open_post', { page_type: 'home', post_id: a.dataset.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); return; }
     const mo = e.target.closest('.card .more');
     if (mo) { toggleCard(mo.closest('.card'), 'button'); return; }
     const b = e.target.closest('.star');
