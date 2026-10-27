@@ -85,7 +85,21 @@ function cleanTitle(p) {
   t = t.replace(/^[\s,.·\-~/:!]+/, '').trim();
   return t.length < 5 ? o : (head + t).trim();
 }
-const CAFE_NOTE = '<p class="cm">글을 누르면 카페 원문으로 가요(카페 회원만 볼 수 있어요): <a href="https://m.cafe.daum.net/dongarry" target="_blank" rel="noopener">[BDR]동아리농구방</a> · <a href="https://m.cafe.naver.com/cornrow" target="_blank" rel="noopener">NSB 농심카페</a></p>';
+// 날짜·시작 시간이 있는 열린 글 → schema.org SportsEvent (검색 결과 '이벤트' 표시용). 장소는 제목 속 체육관 이름과 지역만(주소·좌표 저장 금지 규칙)
+function sportsEvent(p) {
+  if (!p.date || !p.start || p.closed || p.amb || !p.region1) return null;
+  const t = unent(p.title), at = h => `${p.date}T${h}:00+09:00`;
+  const spot = placeOf(t, p.region2) || (p.region2 ? `${p.region1} ${p.region2}` : '');
+  if (!spot) return null; // 광역 지역만 아는 글은 장소가 너무 넓어 뺌
+  const ev = { '@type': 'SportsEvent', name: cleanTitle(p), url: p.url, sport: 'Basketball', startDate: at(p.start),
+    eventStatus: 'https://schema.org/EventScheduled', eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    location: { '@type': 'Place', name: spot,
+      address: { '@type': 'PostalAddress', addressRegion: p.region1, ...(p.region2 ? { addressLocality: p.region2 } : {}), addressCountry: 'KR' } },
+    description: `${BOARD_NAME[p.board] || '게스트'} 모집 글 · ${p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방'} 원문` };
+  if (p.end && p.end > p.start) ev.endDate = at(p.end);
+  return ev;
+}
+const CAFE_NOTE ='<p class="cm">글을 누르면 카페 원문으로 가요(카페 회원만 볼 수 있어요): <a href="https://m.cafe.daum.net/dongarry" target="_blank" rel="noopener">[BDR]동아리농구방</a> · <a href="https://m.cafe.naver.com/cornrow" target="_blank" rel="noopener">NSB 농심카페</a></p>';
 function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, links, cta, home, trend = '', robots = '', empty = '', extra = '', place = null }) {
   const url = `${SITE}${path}`;
   const groups = new Map();
@@ -94,7 +108,7 @@ function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, lin
     : empty || '<p class="empty">지금은 모집 글이 없어요. 가까운 지역이나 전체 목록을 확인해 보세요.</p>';
   const ld = [{ '@context': 'https://schema.org', '@type': 'WebSite', name: '훕게스트', alternateName: ['hoopguest', '농구 게스트 모아보기'], url: SITE + '/' },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.map(([n, u], i) => ({ '@type': 'ListItem', position: i + 1, name: n, item: SITE + u })) },
-    { '@context': 'https://schema.org', '@type': 'ItemList', name: h1, numberOfItems: posts.length, itemListElement: posts.slice(0, 30).map((p, i) => ({ '@type': 'ListItem', position: i + 1, name: unent(p.title), url: p.url })) }];
+    { '@context': 'https://schema.org', '@type': 'ItemList', name: h1, numberOfItems: posts.length, itemListElement: posts.slice(0, 30).map((p, i) => ({ '@type': 'ListItem', position: i + 1, ...(sportsEvent(p) ? { item: sportsEvent(p) } : { name: unent(p.title), url: p.url }) })) }];
   if (place) ld.push({ '@context': 'https://schema.org', '@type': 'SportsActivityLocation', ...place });
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
