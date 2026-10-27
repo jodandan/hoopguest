@@ -97,6 +97,10 @@ function sportsEvent(p) {
       address: { '@type': 'PostalAddress', addressRegion: p.region1, ...(p.region2 ? { addressLocality: p.region2 } : {}), addressCountry: 'KR' } },
     description: `${BOARD_NAME[p.board] || '게스트'} 모집 글 · ${p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방'} 원문` };
   if (p.end && p.end > p.start) ev.endDate = at(p.end);
+  // 구글 권장 항목: 이미지(사이트 대표 이미지), 주최(제목에 팀명이 있을 때만), 참가비(무료로 확인된 글만 0원)
+  ev.image = [`${SITE}/og.png?v=2`];
+  if (p.team) ev.organizer = { '@type': 'SportsTeam', name: p.team, sport: 'Basketball' };
+  if (p.free) { ev.isAccessibleForFree = true; ev.offers = { '@type': 'Offer', price: 0, priceCurrency: 'KRW', availability: 'https://schema.org/InStock', url: p.url, validFrom: p.posted }; }
   return ev;
 }
 // 목록 구조화 데이터: 일정이 있는 글만 SportsEvent로 각각 넣음(ItemList로 묶으면 구글이 캐러셀로 보고 '배타적 속성' 오류를 냄 — 이벤트 캐러셀은 지원 안 함)

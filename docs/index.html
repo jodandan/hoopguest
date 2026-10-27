@@ -267,7 +267,7 @@ button{font:inherit;color:inherit}
 .linkbtn.x{float:right;margin-left:10px;text-decoration:none;color:var(--sub)}
 .state{text-align:center;padding:48px 16px;color:var(--sub);background:var(--card);border:1px dashed var(--line2);border-radius:var(--r-lg)}
 .state button{margin-top:12px}
-.ssr h2{font-size:var(--fs-lg);margin:18px 0 8px}.ssr ul{list-style:none;margin:0;padding:0}.ssr li{padding:8px 0;border-bottom:1px solid var(--line);font-size:var(--fs-md);overflow-wrap:anywhere}.ssr li b{margin-right:6px}.ssr a{color:var(--text)}
+.ssr h2{font-size:var(--fs-lg);margin:0 0 8px} /* 위 여백이 #list 밖으로 겹쳐 나가 카드로 바뀔 때 18px 밀리던 것 */.ssr ul{list-style:none;margin:0;padding:0}.ssr li{padding:8px 0;border-bottom:1px solid var(--line);font-size:var(--fs-md);overflow-wrap:anywhere}.ssr li b{margin-right:6px}.ssr a{color:var(--text)}
 
 
 footer{color:var(--sub);font-size:var(--fs-xs);line-height:1.7;padding:28px 0 84px;border-top:1px solid var(--line);margin-top:28px}
@@ -427,7 +427,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 .day{font-size:27px;line-height:1.2}
 .myhead h2{font-size:30px}
 .tag.x{font-size:16px;line-height:1.1;letter-spacing:0;padding:1px 9px 2px}
-.fpanel .lbl{font-size:23px;line-height:1}
+.fpanel .lbl{font-size:23px;line-height:1;white-space:nowrap} /* 붓글씨가 늦게 오면 대체 글꼴이 더 넓어 두 줄로 꺾이며 필터 줄이 늘었다 줄어듦(화면 밀림) → 한 줄 고정 */
+#rowR1,#rowDate,#rowSlot{min-height:44px} /* 칩이 스크립트로 채워지기 전 빈 줄(31px)→44px로 늘며 목록이 밀리던 것 방지 */
 .tagln{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:12px;font:400 26px/1 var(--f-tag);color:var(--hero-text);opacity:.85;transform:rotate(-4deg);pointer-events:none;white-space:nowrap}
 @media (max-width:999px),(max-height:500px){.tagln{display:none}}
 </style>
