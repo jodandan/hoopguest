@@ -108,7 +108,7 @@ function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, lin
     : empty || '<p class="empty">지금은 모집 글이 없어요. 가까운 지역이나 전체 목록을 확인해 보세요.</p>';
   const ld = [{ '@context': 'https://schema.org', '@type': 'WebSite', name: '훕게스트', alternateName: ['hoopguest', '농구 게스트 모아보기'], url: SITE + '/' },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.map(([n, u], i) => ({ '@type': 'ListItem', position: i + 1, name: n, item: SITE + u })) },
-    { '@context': 'https://schema.org', '@type': 'ItemList', name: h1, numberOfItems: posts.length, itemListElement: posts.slice(0, 30).map((p, i) => ({ '@type': 'ListItem', position: i + 1, ...(sportsEvent(p) ? { item: sportsEvent(p) } : { name: unent(p.title), url: p.url }) })) }];
+    itemList(h1, posts)];
   if (place) ld.push({ '@context': 'https://schema.org', '@type': 'SportsActivityLocation', ...place });
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
