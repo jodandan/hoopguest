@@ -99,13 +99,8 @@ function sportsEvent(p) {
   if (p.end && p.end > p.start) ev.endDate = at(p.end);
   return ev;
 }
-// 목록 구조화 데이터: 일정이 있는 글이 있으면 그 글만 이벤트 목록으로(구글 캐러셀은 항목 형식이 섞이면 오류), 없으면 제목·링크 목록
-function itemList(name, posts) {
-  const ev = posts.map(sportsEvent).filter(Boolean).slice(0, 30);
-  const items = ev.length ? ev.map((e, i) => ({ '@type': 'ListItem', position: i + 1, item: e }))
-    : posts.slice(0, 30).map((p, i) => ({ '@type': 'ListItem', position: i + 1, name: unent(p.title), url: p.url }));
-  return { '@context': 'https://schema.org', '@type': 'ItemList', name, numberOfItems: items.length, itemListElement: items };
-}
+// 목록 구조화 데이터: 일정이 있는 글만 SportsEvent로 각각 넣음(ItemList로 묶으면 구글이 캐러셀로 보고 '배타적 속성' 오류를 냄 — 이벤트 캐러셀은 지원 안 함)
+const eventsLd = posts => posts.map(sportsEvent).filter(Boolean).slice(0, 30).map(e => ({ '@context': 'https://schema.org', ...e }));
 const CAFE_NOTE = '<p class="cm">글을 누르면 카페 원문으로 가요(카페 회원만 볼 수 있어요): <a href="https://m.cafe.daum.net/dongarry" target="_blank" rel="noopener">[BDR]동아리농구방</a> · <a href="https://m.cafe.naver.com/cornrow" target="_blank" rel="noopener">NSB 농심카페</a></p>';
 function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, links, cta, home, trend = '', robots = '', empty = '', extra = '', place = null }) {
   const url = `${SITE}${path}`;
@@ -115,7 +110,7 @@ function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, lin
     : empty || '<p class="empty">지금은 모집 글이 없어요. 가까운 지역이나 전체 목록을 확인해 보세요.</p>';
   const ld = [{ '@context': 'https://schema.org', '@type': 'WebSite', name: '훕게스트', alternateName: ['hoopguest', '농구 게스트 모아보기'], url: SITE + '/' },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.map(([n, u], i) => ({ '@type': 'ListItem', position: i + 1, name: n, item: SITE + u })) },
-    itemList(h1, posts)];
+    ...eventsLd(posts)];
   if (place) ld.push({ '@context': 'https://schema.org', '@type': 'SportsActivityLocation', ...place });
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
