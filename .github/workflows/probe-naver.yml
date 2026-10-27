@@ -22,7 +22,7 @@ jobs:
           console.log('메뉴 수',menus.length);
           const kw=/게스트|픽업|연습|교류|매칭|팀원|용병|모집|구함|대관|농구/;
           for(const x of menus){
-            if(!['B','L','Q','F'].includes(x.menuType)&&!kw.test(x.menuName))continue;
+            if(x.menuType!=='B'){console.log(`${x.menuId}\t${x.menuType}\t${x.menuName}\t-\t-`);continue;}
             let n=0,recent=0,sample='';
             try{const r=await fetch(`https://apis.naver.com/cafe-web/cafe-boardlist-api/v1/cafes/${cafe}/menus/${x.menuId}/articles?page=1&pageSize=50&sortBy=TIME&viewType=L`,{headers:H}).then(r=>r.json());
               const a=r?.result?.articleList||[];n=a.length;const now=Date.now();
