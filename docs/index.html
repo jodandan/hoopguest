@@ -1197,8 +1197,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     const a = e.target.closest('a.title');
     if (a && cafeHintFirst(e, a)) return;
     const cb = e.target.closest('.cafebox a');
-    if (cb) { const src = cb.closest('.cafebox').dataset.src; cafeHintDone(src); track('cafe_hint', { step: cb.dataset.act, post_id: cb.dataset.key, cafe: src }); if (cb.dataset.act === 'open') markSeen(cb.dataset.key); setTimeout(render, 300); return; }
-    if (a) { markSeen(a.dataset.key); setTimeout(render, 300); const p = byKey(a.dataset.key); track('open_post', { post_id: a.dataset.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); return; }
+    if (cb) { const src = cb.closest('.cafebox').dataset.src; cafeHintDone(src); track('cafe_hint', { step: cb.dataset.act, post_id: cb.dataset.key, cafe: src }); if (cb.dataset.act === 'open') { markSeen(cb.dataset.key); const p = byKey(cb.dataset.key); if (p) track('open_post', { page_type: 'home', via: 'cafe_hint', post_id: p.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); } setTimeout(render, 300); return; }
+    if (a) { markSeen(a.dataset.key); setTimeout(render, 300); const p = byKey(a.dataset.key); track('open_post', { page_type: 'home', post_id: a.dataset.key, board: boardOf(p), region1: p.region1 || '기타', slot: p.slot || '미정' }); return; }
     const mo = e.target.closest('.card .more');
     if (mo) { toggleCard(mo.closest('.card'), 'button'); return; }
     const b = e.target.closest('.star');

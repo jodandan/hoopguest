@@ -184,7 +184,7 @@ li{border-color:var(--card-line,#EFEAE2);border-radius:20px;padding:12px 14px}
 nav.bc{margin:4px 0 0}h1{font-size:22px;line-height:1.25;margin:0 0 4px}.intro{font-size:14px;line-height:1.5;margin:0 0 10px}
 h2{margin-top:16px}}
 ${THEME_CSS}</style>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}')}</script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}');document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="cafe.daum.net"],a[href*="cafe.naver.com"]');if(a)gtag('event','open_post',{page_type:'${path.startsWith('/g/') ? 'gym' : 'region'}',transport_type:'beacon'})});}</script>
 </head><body>
 <header class="hdr"><div class="w"><a class="brand" href="/" aria-label="훕게스트 첫 화면"><img src="/ball.svg" alt="" width="30" height="30"><b>훕게스트</b><i>모아보기</i></a></div></header>
 <main class="w">
@@ -343,7 +343,7 @@ li{border-color:var(--card-line,#EFEAE2);border-radius:20px;padding:12px 14px}
 :root[data-theme="dark"] li .t{color:var(--btn)}:root[data-theme="dark"] .srcm.nv{color:#5FD38A}:root[data-theme="dark"] .srcm.dm{color:#FF8A7E}:root[data-theme="dark"] li{border-color:var(--line)}
 .c .when{font:400 24px/1.25 "Black Han Sans","Noto Sans KR",sans-serif;letter-spacing:.01em}
 ${THEME_CSS}</style>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}');gtag('event','shared_post_view',{post_id:'${esc(p.key)}'})}</script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);gtag('js',new Date());gtag('config','${GA_ID}');gtag('event','shared_post_view',{post_id:'${esc(p.key)}'});document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="cafe.daum.net"],a[href*="cafe.naver.com"]');if(a)gtag('event','open_post',{page_type:'share',post_id:'${esc(p.key)}',transport_type:'beacon'})});}</script>
 </head><body>
 <header class="hdr"><div class="w"><a class="brand" href="/" aria-label="훕게스트 첫 화면"><img src="/ball.svg" alt="" width="30" height="30"><b>훕게스트</b><i>모아보기</i></a></div></header>
 <main class="w">
