@@ -6,7 +6,7 @@
 // - POST /logout                                   : 이 기기 로그인 토큰 삭제
 // 맞춤 알림: 로그인한 채 알림을 켠 기기는 devices(sid → uid)로 계정에 묶이고, 계정의 알림 조건(data.alert)이 바뀌면
 //           worker.js가 넘겨준 onAlert로 묶인 기기 구독 조건을 모두 바꾼다
-// 저장소: D1 "DB" — users(uid, data, updated, created) · sessions(th, uid, created) · logins(state, ret, mode, n, created) · devices(sid, uid, th, created) · meta(k, v)
+// 저장소: D1 "DB" — users(uid, data, updated, created) · sessions(th, uid, created) · logins(state, ret, mode, n, uid, created) · devices(sid, uid, th, created) · meta(k, v)
 // 개인정보: 카카오에서 받는 건 회원번호뿐. 서버엔 '비밀 소금 + 회원번호'의 SHA-256 값(uid)만 저장하고,
 //           회원번호 원문·이름·이메일·카카오 토큰은 저장하지 않는다. 로그인 토큰도 해시로만 보관.
 // 시크릿: KAKAO_REST_KEY(로그인에 쓸 REST API 키) / 선택: KAKAO_CLIENT_SECRET(카카오 콘솔에서 켰을 때만)
@@ -25,17 +25,18 @@ function init(env) {
     env.DB.prepare('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS users (uid TEXT PRIMARY KEY, data TEXT NOT NULL, updated INTEGER NOT NULL, created INTEGER NOT NULL)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS sessions (th TEXT PRIMARY KEY, uid TEXT NOT NULL, created INTEGER NOT NULL)'),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS logins (state TEXT PRIMARY KEY, ret TEXT NOT NULL, mode TEXT NOT NULL, created INTEGER NOT NULL, n TEXT NOT NULL DEFAULT '')"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS logins (state TEXT PRIMARY KEY, ret TEXT NOT NULL, mode TEXT NOT NULL, created INTEGER NOT NULL, n TEXT NOT NULL DEFAULT '', uid TEXT NOT NULL DEFAULT '')"),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS devices (sid TEXT PRIMARY KEY, uid TEXT NOT NULL, th TEXT NOT NULL, created INTEGER NOT NULL)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, body TEXT NOT NULL, reply TEXT NOT NULL, page TEXT NOT NULL, ih TEXT NOT NULL, created INTEGER NOT NULL, done INTEGER NOT NULL DEFAULT 0)'),
     env.DB.prepare('CREATE INDEX IF NOT EXISTS contacts_ih ON contacts (ih, created)'),
     env.DB.prepare('CREATE INDEX IF NOT EXISTS sessions_uid ON sessions (uid)'),
     env.DB.prepare('CREATE INDEX IF NOT EXISTS devices_uid ON devices (uid)'),
-  ]).then(() => env.DB.prepare("ALTER TABLE logins ADD COLUMN n TEXT NOT NULL DEFAULT ''").run().catch(() => {})) // 예전 표에 n 칸 추가(이미 있으면 무시)
+  ]).then(() => env.DB.prepare("ALTER TABLE logins ADD COLUMN n TEXT NOT NULL DEFAULT ''").run().catch(() => {})) // 예전 표에 n·uid 칸 추가(이미 있으면 무시)
+    .then(() => env.DB.prepare("ALTER TABLE logins ADD COLUMN uid TEXT NOT NULL DEFAULT ''").run().catch(() => {}))
     .catch(e => { ready = null; throw e; });
   return ready;
 }
-async function salt(env) {
+export async function salt(env) {
   const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first();
   if (row) return row.v;
   await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('salt', ?)").bind(rand(32)).run();
@@ -85,7 +86,7 @@ export async function unlinkDevice(env, sid) {
 // hooks.onAlert(sids, alert): 계정 알림 조건이 바뀌었을 때 묶인 기기 구독을 고치는 함수 (worker.js 제공)
 export async function handleAccount(req, env, url, json, hooks = {}) {
   const p = url.pathname;
-  if (!['/auth/kakao', '/auth/kakao/callback', '/me', '/logout', '/contact', '/admin/contacts'].includes(p)) return null;
+  if (!['/auth/kakao', '/auth/kakao/callback', '/auth/withdraw', '/me', '/logout', '/contact', '/admin/contacts'].includes(p)) return null;
   if (!env.DB || !env.KAKAO_REST_KEY) return json(req, { error: 'login not configured' }, 503);
   await init(env);
   // 사이트 안 문의하기 (로그인 필요 없음) — 운영자만 봄, 같은 접속지에서 1시간 5건까지
@@ -106,7 +107,7 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
   }
 
   if (p === '/auth/kakao' && req.method === 'GET') {
-    const mode = url.searchParams.get('mode') === 'withdraw' ? 'withdraw' : 'login';
+    const mode = 'login'; // 탈퇴는 로그인한 상태에서 POST /auth/withdraw 로만 시작(링크만으로 탈퇴 상태를 못 만들게)
     const state = rand(18), ret = safeReturn(url.searchParams.get('return') || ''), now = Date.now();
     const n = /^[A-Za-z0-9_-]{16,64}$/.test(url.searchParams.get('n') || '') ? url.searchParams.get('n') : '';
     await env.DB.batch([
@@ -114,13 +115,12 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
       env.DB.prepare('INSERT INTO logins (state, ret, mode, n, created) VALUES (?, ?, ?, ?, ?)').bind(state, ret, mode, n, now),
     ]);
     const q = new URLSearchParams({ response_type: 'code', client_id: env.KAKAO_REST_KEY, redirect_uri: url.origin + '/auth/kakao/callback', state });
-    if (mode === 'withdraw') q.set('prompt', 'login'); // 탈퇴는 카카오에서 다시 로그인해야 진행 — 다른 사이트 링크만으로 탈퇴되지 않게
     return new Response(null, { status: 302, headers: { Location: 'https://kauth.kakao.com/oauth/authorize?' + q, 'Cache-Control': 'no-store' } });
   }
 
   if (p === '/auth/kakao/callback' && req.method === 'GET') {
     const state = url.searchParams.get('state') || '';
-    const st = await env.DB.prepare('SELECT ret, mode, n, created FROM logins WHERE state = ?').bind(state).first();
+    const st = await env.DB.prepare('SELECT ret, mode, n, uid, created FROM logins WHERE state = ?').bind(state).first();
     await env.DB.prepare('DELETE FROM logins WHERE state = ? OR created < ?').bind(state, Date.now() - STATE_MS).run();
     if (!st || Date.now() - st.created > STATE_MS) return back(SITE + '/', 'login_error=expired');
     const code = url.searchParams.get('code');
@@ -135,6 +135,7 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     if (!me.id) return back(st.ret, 'login_error=user');
     const uid = await sha(`${await salt(env)}:${me.id}`);
     if (st.mode === 'withdraw') {
+      if (!st.uid || st.uid !== uid) return back(st.ret, 'login_error=mismatch'); // 탈퇴를 시작한 계정과 카카오에서 다시 로그인한 계정이 같을 때만 삭제
       await fetch('https://kapi.kakao.com/v1/user/unlink', { method: 'POST', headers: auth }).catch(() => {});
       const { results: devs } = await env.DB.prepare('SELECT sid FROM devices WHERE uid = ?').bind(uid).all();
       if (env.SUBS) for (const d of (devs || []).slice(0, 50)) await env.SUBS.delete(d.sid).catch(() => {}); // 계정에 묶였던 기기의 알림 구독(조건 사본)도 삭제
@@ -154,6 +155,17 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
   if (p === '/me' && req.method === 'GET' && !req.headers.get('Authorization')) return json(req, { login: false });
   const u = await who(req, env);
   if (!u) return json(req, { error: 'login required' }, 401);
+  if (p === '/auth/withdraw' && req.method === 'POST') { // 탈퇴 시작: 로그인한 계정(uid)을 상태값에 묶고, 카카오에서 다시 로그인한 계정이 같을 때만 콜백에서 삭제
+    const b = await req.json().catch(() => ({}));
+    const state = rand(18), ret = safeReturn(String(b.return || '')), now = Date.now();
+    const n = /^[A-Za-z0-9_-]{16,64}$/.test(b.n || '') ? b.n : '';
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM logins WHERE created < ?').bind(now - STATE_MS),
+      env.DB.prepare('INSERT INTO logins (state, ret, mode, n, uid, created) VALUES (?, ?, ?, ?, ?, ?)').bind(state, ret, 'withdraw', n, u.uid, now),
+    ]);
+    const q = new URLSearchParams({ response_type: 'code', client_id: env.KAKAO_REST_KEY, redirect_uri: url.origin + '/auth/kakao/callback', state, prompt: 'login' });
+    return json(req, { url: 'https://kauth.kakao.com/oauth/authorize?' + q });
+  }
   if (p === '/me' && req.method === 'GET') {
     const row = await env.DB.prepare('SELECT data, updated FROM users WHERE uid = ?').bind(u.uid).first();
     if (!row) return json(req, { error: 'login required' }, 401);

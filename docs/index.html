@@ -1625,7 +1625,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     $('myTheme').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; store.set('bdr.theme', b.dataset.v || null); applyTheme(); track('theme_toggle', { to: b.dataset.v || 'system', from: 'my' }); render(); };
     if (on) {
       $('acctOut').onclick = async () => { try { await acctApi('/logout', { method: 'POST' }); } catch {} store.set(AUTH_KEY, null); acctEdit = null; acctDevices = 0; track('login', { step: 'logout' }); toast('로그아웃했어요. 이 기기의 저장 글·설정은 그대로 남아요'); renderAcct(); };
-      $('acctBye').onclick = () => { if (!acctBye) { acctBye = true; return render(); } track('login', { step: 'withdraw' }); location.href = `${PUSH_API}/auth/kakao?mode=withdraw&n=${loginNonce()}&return=${ret}`; };
+      $('acctBye').onclick = async () => { if (!acctBye) { acctBye = true; return render(); } track('login', { step: 'withdraw' }); try { const r = await fetch(PUSH_API + '/auth/withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authTok() }, body: JSON.stringify({ n: loginNonce(), return: decodeURIComponent(ret) }) }); const j = await r.json(); if (!r.ok || !j.url) throw 0; location.href = j.url; } catch { toast('탈퇴를 시작하지 못했어요. 다시 로그인한 뒤 시도해 주세요'); } };
       renderAlertBox(al, pushOn);
     }
   }
@@ -1662,7 +1662,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
       + '<div class="acctal" id="acctAl"></div>'
       + `<div class="acts"><button class="chip" id="acctOut" type="button">로그아웃</button><button class="chip" id="acctBye" type="button">${acctBye ? '한 번 더 누르면 카카오 확인 후 계정 데이터를 지워요' : '탈퇴하고 데이터 지우기'}</button></div>${note}`;
     $('acctOut').onclick = async () => { try { await acctApi('/logout', { method: 'POST' }); } catch {} store.set(AUTH_KEY, null); acctEdit = null; acctDevices = 0; track('login', { step: 'logout' }); toast('로그아웃했어요. 이 기기의 저장 글·설정은 그대로 남아요'); renderAcct(); };
-    $('acctBye').onclick = () => { if (!acctBye) { acctBye = true; return renderAcct(); } track('login', { step: 'withdraw' }); location.href = `${PUSH_API}/auth/kakao?mode=withdraw&n=${loginNonce()}&return=${ret}`; };
+    $('acctBye').onclick = async () => { if (!acctBye) { acctBye = true; return renderAcct(); } track('login', { step: 'withdraw' }); try { const r = await fetch(PUSH_API + '/auth/withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authTok() }, body: JSON.stringify({ n: loginNonce(), return: decodeURIComponent(ret) }) }); const j = await r.json(); if (!r.ok || !j.url) throw 0; location.href = j.url; } catch { toast('탈퇴를 시작하지 못했어요. 다시 로그인한 뒤 시도해 주세요'); } };
     renderAlertBox(al, pushOn);
   }
 
@@ -1800,6 +1800,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     const msg = store.get('bdr.authMsg', null); storeSet0('bdr.authMsg', null);
     if (msg === 'login') { const old = store.get('bdr.authOld', null); if (old) { storeSet0('bdr.authOld', null); fetch(PUSH_API + '/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + old } }).catch(() => {}); } toast('로그인했어요. 이 기기의 저장 글·설정을 계정과 합쳤어요'); track('login', { step: 'done' }); await pullSync(true); }
     else if (msg === 'withdrawn:1') { try { const reg = await navigator.serviceWorker.ready; const s = await reg.pushManager.getSubscription(); if (s) await s.unsubscribe(); } catch {} store.set(PUSH_KEY, null); renderPush(); renderPushBtn(); toast('탈퇴했어요. 계정 데이터와 이 기기 알림을 모두 지웠어요'); track('login', { step: 'withdrawn' }); }
+    else if (msg === 'login_error:mismatch') toast('탈퇴하려던 계정과 다른 카카오 계정이라 탈퇴하지 않았어요');
     else if (msg) toast('로그인하지 못했어요. 다시 시도해 주세요');
     else if (authTok()) await pullSync(false);
   })();
