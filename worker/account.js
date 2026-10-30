@@ -136,6 +136,8 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     const uid = await sha(`${await salt(env)}:${me.id}`);
     if (st.mode === 'withdraw') {
       await fetch('https://kapi.kakao.com/v1/user/unlink', { method: 'POST', headers: auth }).catch(() => {});
+      const { results: devs } = await env.DB.prepare('SELECT sid FROM devices WHERE uid = ?').bind(uid).all();
+      if (env.SUBS) for (const d of (devs || []).slice(0, 50)) await env.SUBS.delete(d.sid).catch(() => {}); // 계정에 묶였던 기기의 알림 구독(조건 사본)도 삭제
       await env.DB.batch([env.DB.prepare('DELETE FROM users WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM sessions WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM devices WHERE uid = ?').bind(uid)]);
       return back(st.ret, 'withdrawn=1' + (st.n ? '&n=' + st.n : ''));
     }

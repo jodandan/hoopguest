@@ -27,7 +27,7 @@ const NAVER_API = `https://apis.naver.com/cafe-web/cafe-boardlist-api/v1/cafes/$
 
 // 제목 속 연락처 가리기 (전화번호·카톡/오픈채팅 ID)
 export function maskTitle(t) {
-  return String(t)
+  return String(t).slice(0, 200) // 제목 길이 상한(정규식 처리 부담 방지 — 실제 제목은 100자 안팎)
     .replace(/(?:\+?82[-.\s]?)?0?1[016789][-.\s]?\d{3,4}[-.\s]?\d{4}/g, '010-****-****')
     .replace(/((?:카톡|카카오톡|오픈채팅|오톡|kakao)\s*(?:아이디|id|ID)?\s*[:：]?\s*)[A-Za-z0-9_.\-]{3,}/gi, '$1****');
 }
