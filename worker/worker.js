@@ -16,7 +16,7 @@ const PUSH_BUDGET = 40, MAX_QUEUE = 2000; // 한 번 실행에 보낼 알림 수
 // 브라우저 푸시 서비스 주소만 구독으로 받는다 (아무 주소나 넣어 가짜 구독을 쌓지 못하게)
 const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^(updates\.)?push\.services\.mozilla\.com$/, /^[a-z0-9-]+\.notify\.windows\.com$/, /^web\.push\.apple\.com$/];
 const pushEndpoint = e => { try { const u = new URL(e); return typeof e === 'string' && e.length <= 800 && u.protocol === 'https:' && !u.port && !u.username && !u.password && (!u.search || /^\?token=[A-Za-z0-9%_\-+=\/.]+$/.test(u.search)) && !u.hash && /^\/[A-Za-z0-9_\-:\/.=%+]{2,}$/.test(u.pathname) && PUSH_HOSTS.some(r => r.test(u.hostname)); } catch { return false; } }; // 기본 포트만, 계정정보·임의 쿼리 금지(윈도 알림의 ?token= 만 허용)
-const MAX_SUBS = 800, SUB_PER_IP_HOUR = 10, FAIL_LIMIT = 3; // 전체 구독 상한(무료 플랜 한 실행 KV 요청 1000건 안쪽) / IP당 시간당 새 구독 / 연속 실패 시 정리
+const MAX_SUBS = 800, SUB_PER_IP_HOUR = 10, FAIL_LIMIT = 3, KEY_GRACE_MS = 14 * 864e5; // 전체 구독 상한(무료 플랜 한 실행 KV 요청 1000건 안쪽) / IP당 시간당 새 구독 / 연속 실패 시 정리 / 403(알림 키 불일치)은 14일 기다렸다 정리
 
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const enc = s => new TextEncoder().encode(s);
@@ -146,18 +146,21 @@ export async function checkAndPush(env, now = Date.now()) {
   if (!queue.length) return { fresh: fresh.length, first, sent: 0 };
   const v = await vapid(env);
   const now_ = queue.slice(0, PUSH_BUDGET), later = queue.slice(PUSH_BUDGET, PUSH_BUDGET + MAX_QUEUE);
-  let sent = 0, removed = 0;
+  let sent = 0, removed = 0, k403 = 0;
   for (const id of now_) {
     const s = subs.find(x => x.id === id) || await env.SUBS.get(id, 'json').catch(() => null);
     if (!s || !s.sub) continue; // 그사이 해지된 구독
     const st = await push(v, s.sub).catch(() => 0);
+    // 403 = 알림 키가 안 맞음. 서버 키가 바뀐 경우(KV 초기화 등)면 모든 구독이 한꺼번에 403 → 바로 지우지 않고 14일 유예(그사이 사이트를 열면 새 키로 다시 구독됨)
+    if (st === 403) { k403++; const f403 = s.f403 || now; if (now - f403 < KEY_GRACE_MS) { await env.SUBS.put(id, JSON.stringify({ ...strip(s), f403 })).catch(() => {}); continue; } }
     const dead = st === 404 || st === 410 || st === 403 || (!(st >= 200 && st < 300) && (s.fail || 0) + 1 >= FAIL_LIMIT);
     if (dead) { await env.SUBS.delete(id).catch(() => {}); await unlinkDevice(env, id).catch(() => {}); removed++; } // 없어진·키가 안 맞는·계속 실패하는 구독 정리
-    else if (st >= 200 && st < 300) { sent++; if (s.fail) await env.SUBS.put(id, JSON.stringify({ ...strip(s), fail: 0 })).catch(() => {}); }
+    else if (st >= 200 && st < 300) { sent++; if (s.fail || s.f403) { const { fail, f403, ...rest } = strip(s); await env.SUBS.put(id, JSON.stringify(rest)).catch(() => {}); } }
     else await env.SUBS.put(id, JSON.stringify({ ...strip(s), fail: (s.fail || 0) + 1 })).catch(() => {});
   }
   if (later.length || prevQueue.length) await env.SUBS.put('queue', JSON.stringify(later)).catch(e => console.log('queue put', String(e)));
-  return { fresh: fresh.length, sent, removed, queued: later.length };
+  if (k403) console.log('push 403', k403, '(알림 키 불일치 — 많으면 vapid 키가 바뀌었는지 확인)');
+  return { fresh: fresh.length, sent, removed, queued: later.length, k403 };
 }
 
 async function dispatchScrape(env) {

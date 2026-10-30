@@ -14,6 +14,7 @@ const SITE = 'https://hoopguest.kro.kr';
 const ADMIN_UID = 'FfLxir2WfmLQg7tgKd_4mBMDRwyFPbWUFXuqOwei8E8'; // 운영자 계정 식별자(해시값) — 문의함을 볼 수 있는 계정
 const RETURN_PATHS = ['/', '/my/']; // 로그인 후 돌아갈 수 있는 곳 — 이 사이트의 첫 화면·마이페이지만 (토큰이 다른 페이지·도메인으로 새지 않게)
 const SESSION_MS = 180 * 864e5, STATE_MS = 10 * 60e3, MAX_DATA = 32000, MAX_RET_QS = 300;
+const MAX_DEVICES = 20, CONTACT_DONE_MS = 180 * 864e5, CONTACT_MAX_MS = 365 * 864e5; // 계정당 연결 기기 수 / 문의 보관: 처리 후 6개월, 처리 안 해도 1년
 
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const rand = n => b64u(crypto.getRandomValues(new Uint8Array(n)));
@@ -61,7 +62,11 @@ export async function linkDevice(req, env, sid) {
   if (!env.DB) return null;
   await init(env);
   const u = await who(req, env);
-  if (u) await env.DB.prepare('INSERT OR REPLACE INTO devices (sid, uid, th, created) VALUES (?, ?, ?, ?)').bind(sid, u.uid, u.th, Date.now()).run();
+  if (u) await env.DB.batch([
+    env.DB.prepare('INSERT OR REPLACE INTO devices (sid, uid, th, created) VALUES (?, ?, ?, ?)').bind(sid, u.uid, u.th, Date.now()),
+    // 계정당 연결 기기 MAX_DEVICES대까지 — 넘으면 가장 오래된 연결을 끊음(그 기기 알림은 계정 없이 계속 옴) → 탈퇴 때 기기 구독을 빠짐없이 지울 수 있게
+    env.DB.prepare('DELETE FROM devices WHERE uid = ? AND sid NOT IN (SELECT sid FROM devices WHERE uid = ? ORDER BY created DESC LIMIT ?)').bind(u.uid, u.uid, MAX_DEVICES),
+  ]);
   else await env.DB.prepare('DELETE FROM devices WHERE sid = ?').bind(sid).run();
   return !!u;
 }
@@ -74,6 +79,7 @@ export async function sweepAccounts(env) {
     env.DB.prepare('DELETE FROM logins WHERE created < ?').bind(now - STATE_MS),
     env.DB.prepare('DELETE FROM sessions WHERE created < ?').bind(now - SESSION_MS),
     env.DB.prepare('DELETE FROM devices WHERE th NOT IN (SELECT th FROM sessions)'),
+    env.DB.prepare('DELETE FROM contacts WHERE (done > 0 AND done < ?) OR created < ?').bind(now - CONTACT_DONE_MS, now - CONTACT_MAX_MS), // 문의: 처리 후 6개월, 처리 안 했어도 받은 지 1년
   ]);
 }
 export async function unlinkDevice(env, sid) {
@@ -101,7 +107,7 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     if (n && n.n >= 5) return json(req, { error: 'too many' }, 429);
     await env.DB.batch([
       env.DB.prepare('INSERT INTO contacts (kind, body, reply, page, ih, created) VALUES (?, ?, ?, ?, ?, ?)').bind(kind, body, reply, page, ih, now),
-      env.DB.prepare('DELETE FROM contacts WHERE done > 0 AND done < ?').bind(now - 180 * 864e5), // 처리하고 6개월 지난 문의 삭제
+      env.DB.prepare('DELETE FROM contacts WHERE (done > 0 AND done < ?) OR created < ?').bind(now - CONTACT_DONE_MS, now - CONTACT_MAX_MS), // 처리하고 6개월, 처리 안 했어도 1년 지난 문의 삭제
     ]);
     return json(req, { ok: true });
   }
@@ -138,7 +144,7 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
       if (!st.uid || st.uid !== uid) return back(st.ret, 'login_error=mismatch'); // 탈퇴를 시작한 계정과 카카오에서 다시 로그인한 계정이 같을 때만 삭제
       await fetch('https://kapi.kakao.com/v1/user/unlink', { method: 'POST', headers: auth }).catch(() => {});
       const { results: devs } = await env.DB.prepare('SELECT sid FROM devices WHERE uid = ?').bind(uid).all();
-      if (env.SUBS) for (const d of (devs || []).slice(0, 50)) await env.SUBS.delete(d.sid).catch(() => {}); // 계정에 묶였던 기기의 알림 구독(조건 사본)도 삭제
+      if (env.SUBS) for (const d of (devs || []).slice(0, 200)) await env.SUBS.delete(d.sid).catch(() => {}); // 계정에 묶였던 기기의 알림 구독도 삭제(연결은 계정당 MAX_DEVICES대로 제한되어 전부 지워짐)
       await env.DB.batch([env.DB.prepare('DELETE FROM users WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM sessions WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM devices WHERE uid = ?').bind(uid)]);
       return back(st.ret, 'withdrawn=1' + (st.n ? '&n=' + st.n : ''));
     }
