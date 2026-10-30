@@ -1,19 +1,19 @@
 // 훕게스트 계정(카카오 로그인, 선택) — 저장한 글·설정·알림 조건을 기기끼리 동기화
-// - GET  /auth/kakao?mode=login|withdraw&return=… : 카카오 로그인 화면으로 보냄
-// - GET  /auth/kakao/callback                     : 로그인 완료 → 사이트로 돌아가며 #login=<토큰> 전달
+// - GET  /auth/kakao?mode=login|withdraw&n=…&return=… : 카카오 로그인 화면으로 보냄 (n: 로그인을 시작한 브라우저의 일회용 값)
+// - GET  /auth/kakao/callback                     : 로그인 완료 → 사이트로 돌아가며 #login=<토큰>&n=<값> 전달 (브라우저는 n이 맞을 때만 받음)
 //                                                   (탈퇴 모드면 카카오 연결 끊기 + 데이터 삭제 → #withdrawn=1)
 // - GET  /me · PUT /me                             : 내 데이터 읽기·저장 (Authorization: Bearer <토큰>)
 // - POST /logout                                   : 이 기기 로그인 토큰 삭제
 // 맞춤 알림: 로그인한 채 알림을 켠 기기는 devices(sid → uid)로 계정에 묶이고, 계정의 알림 조건(data.alert)이 바뀌면
 //           worker.js가 넘겨준 onAlert로 묶인 기기 구독 조건을 모두 바꾼다
-// 저장소: D1 "DB" — users(uid, data, updated, created) · sessions(th, uid, created) · logins(state, ret, mode, created) · devices(sid, uid, th, created) · meta(k, v)
+// 저장소: D1 "DB" — users(uid, data, updated, created) · sessions(th, uid, created) · logins(state, ret, mode, n, created) · devices(sid, uid, th, created) · meta(k, v)
 // 개인정보: 카카오에서 받는 건 회원번호뿐. 서버엔 '비밀 소금 + 회원번호'의 SHA-256 값(uid)만 저장하고,
 //           회원번호 원문·이름·이메일·카카오 토큰은 저장하지 않는다. 로그인 토큰도 해시로만 보관.
 // 시크릿: KAKAO_REST_KEY(로그인에 쓸 REST API 키) / 선택: KAKAO_CLIENT_SECRET(카카오 콘솔에서 켰을 때만)
 const SITE = 'https://hoopguest.kro.kr';
 const ADMIN_UID = 'FfLxir2WfmLQg7tgKd_4mBMDRwyFPbWUFXuqOwei8E8'; // 운영자 계정 식별자(해시값) — 문의함을 볼 수 있는 계정
-const RETURN_OK = [SITE, 'https://bdrguest.kro.kr', 'https://jodandan.github.io'];
-const SESSION_MS = 180 * 864e5, STATE_MS = 10 * 60e3, MAX_DATA = 32000;
+const RETURN_PATHS = ['/', '/my/']; // 로그인 후 돌아갈 수 있는 곳 — 이 사이트의 첫 화면·마이페이지만 (토큰이 다른 페이지·도메인으로 새지 않게)
+const SESSION_MS = 180 * 864e5, STATE_MS = 10 * 60e3, MAX_DATA = 32000, MAX_RET_QS = 300;
 
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const rand = n => b64u(crypto.getRandomValues(new Uint8Array(n)));
@@ -25,10 +25,14 @@ function init(env) {
     env.DB.prepare('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS users (uid TEXT PRIMARY KEY, data TEXT NOT NULL, updated INTEGER NOT NULL, created INTEGER NOT NULL)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS sessions (th TEXT PRIMARY KEY, uid TEXT NOT NULL, created INTEGER NOT NULL)'),
-    env.DB.prepare('CREATE TABLE IF NOT EXISTS logins (state TEXT PRIMARY KEY, ret TEXT NOT NULL, mode TEXT NOT NULL, created INTEGER NOT NULL)'),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS logins (state TEXT PRIMARY KEY, ret TEXT NOT NULL, mode TEXT NOT NULL, created INTEGER NOT NULL, n TEXT NOT NULL DEFAULT '')"),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS devices (sid TEXT PRIMARY KEY, uid TEXT NOT NULL, th TEXT NOT NULL, created INTEGER NOT NULL)'),
     env.DB.prepare('CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, body TEXT NOT NULL, reply TEXT NOT NULL, page TEXT NOT NULL, ih TEXT NOT NULL, created INTEGER NOT NULL, done INTEGER NOT NULL DEFAULT 0)'),
-  ]).catch(e => { ready = null; throw e; });
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS contacts_ih ON contacts (ih, created)'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS sessions_uid ON sessions (uid)'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS devices_uid ON devices (uid)'),
+  ]).then(() => env.DB.prepare("ALTER TABLE logins ADD COLUMN n TEXT NOT NULL DEFAULT ''").run().catch(() => {})) // 예전 표에 n 칸 추가(이미 있으면 무시)
+    .catch(e => { ready = null; throw e; });
   return ready;
 }
 async function salt(env) {
@@ -38,7 +42,7 @@ async function salt(env) {
   return (await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first()).v;
 }
 function safeReturn(r) {
-  try { const u = new URL(r); if (RETURN_OK.includes(u.origin)) return u.origin + u.pathname + u.search; } catch {}
+  try { const u = new URL(r); if (u.origin === SITE && RETURN_PATHS.includes(u.pathname)) return SITE + u.pathname + (u.search.length <= MAX_RET_QS ? u.search : ''); } catch {}
   return SITE + '/';
 }
 const back = (ret, frag) => new Response(null, { status: 302, headers: { Location: `${ret}#${frag}`, 'Cache-Control': 'no-store' } });
@@ -59,6 +63,17 @@ export async function linkDevice(req, env, sid) {
   if (u) await env.DB.prepare('INSERT OR REPLACE INTO devices (sid, uid, th, created) VALUES (?, ?, ?, ?)').bind(sid, u.uid, u.th, Date.now()).run();
   else await env.DB.prepare('DELETE FROM devices WHERE sid = ?').bind(sid).run();
   return !!u;
+}
+// 주기 정리(크론): 끝나지 않은 로그인 시작 기록·만료 세션·세션 없는 기기 연결
+export async function sweepAccounts(env) {
+  if (!env.DB) return;
+  await init(env);
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM logins WHERE created < ?').bind(now - STATE_MS),
+    env.DB.prepare('DELETE FROM sessions WHERE created < ?').bind(now - SESSION_MS),
+    env.DB.prepare('DELETE FROM devices WHERE th NOT IN (SELECT th FROM sessions)'),
+  ]);
 }
 export async function unlinkDevice(env, sid) {
   if (!env.DB) return;
@@ -92,15 +107,20 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
 
   if (p === '/auth/kakao' && req.method === 'GET') {
     const mode = url.searchParams.get('mode') === 'withdraw' ? 'withdraw' : 'login';
-    const state = rand(18), ret = safeReturn(url.searchParams.get('return') || '');
-    await env.DB.prepare('INSERT INTO logins (state, ret, mode, created) VALUES (?, ?, ?, ?)').bind(state, ret, mode, Date.now()).run();
+    const state = rand(18), ret = safeReturn(url.searchParams.get('return') || ''), now = Date.now();
+    const n = /^[A-Za-z0-9_-]{16,64}$/.test(url.searchParams.get('n') || '') ? url.searchParams.get('n') : '';
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM logins WHERE created < ?').bind(now - STATE_MS), // 끝나지 않은 로그인 시작 기록은 10분 뒤 정리
+      env.DB.prepare('INSERT INTO logins (state, ret, mode, n, created) VALUES (?, ?, ?, ?, ?)').bind(state, ret, mode, n, now),
+    ]);
     const q = new URLSearchParams({ response_type: 'code', client_id: env.KAKAO_REST_KEY, redirect_uri: url.origin + '/auth/kakao/callback', state });
+    if (mode === 'withdraw') q.set('prompt', 'login'); // 탈퇴는 카카오에서 다시 로그인해야 진행 — 다른 사이트 링크만으로 탈퇴되지 않게
     return new Response(null, { status: 302, headers: { Location: 'https://kauth.kakao.com/oauth/authorize?' + q, 'Cache-Control': 'no-store' } });
   }
 
   if (p === '/auth/kakao/callback' && req.method === 'GET') {
     const state = url.searchParams.get('state') || '';
-    const st = await env.DB.prepare('SELECT ret, mode, created FROM logins WHERE state = ?').bind(state).first();
+    const st = await env.DB.prepare('SELECT ret, mode, n, created FROM logins WHERE state = ?').bind(state).first();
     await env.DB.prepare('DELETE FROM logins WHERE state = ? OR created < ?').bind(state, Date.now() - STATE_MS).run();
     if (!st || Date.now() - st.created > STATE_MS) return back(SITE + '/', 'login_error=expired');
     const code = url.searchParams.get('code');
@@ -117,7 +137,7 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     if (st.mode === 'withdraw') {
       await fetch('https://kapi.kakao.com/v1/user/unlink', { method: 'POST', headers: auth }).catch(() => {});
       await env.DB.batch([env.DB.prepare('DELETE FROM users WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM sessions WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM devices WHERE uid = ?').bind(uid)]);
-      return back(st.ret, 'withdrawn=1');
+      return back(st.ret, 'withdrawn=1' + (st.n ? '&n=' + st.n : ''));
     }
     const now = Date.now(), t = rand(32);
     await env.DB.batch([
@@ -125,7 +145,7 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
       env.DB.prepare('INSERT INTO sessions (th, uid, created) VALUES (?, ?, ?)').bind(await sha(t), uid, now),
       env.DB.prepare('DELETE FROM sessions WHERE created < ?').bind(now - SESSION_MS),
     ]);
-    return back(st.ret, 'login=' + t);
+    return back(st.ret, 'login=' + t + (st.n ? '&n=' + st.n : ''));
   }
 
   // 로그인 안 한 방문자의 '로그인 기능 켜져 있나' 확인(토큰 없이 GET /me)은 401 대신 200 — 브라우저 콘솔 오류가 안 나게
@@ -161,7 +181,7 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
   if (p === '/admin/contacts') { // 문의함 — 운영자 계정만
     if (!ADMIN_UID || u.uid !== ADMIN_UID) return json(req, { error: 'forbidden' }, 403);
     if (req.method === 'GET') {
-      const r = await env.DB.prepare('SELECT id, kind, body, reply, page, created, done FROM contacts ORDER BY id DESC LIMIT 200').all();
+      const r = await env.DB.prepare('SELECT id, kind, body, reply, page, created, done FROM contacts ORDER BY (done > 0), id DESC LIMIT 200').all();
       return json(req, { items: r.results || [] });
     }
     if (req.method === 'POST') {

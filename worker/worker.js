@@ -5,13 +5,16 @@
 // - cron(5분마다)                 : 사이트 data.json의 새 글 확인 → 조건 맞는 구독자에게 푸시
 //                                   + 매번 GitHub 수집 워크플로 실행 요청
 // 바인딩: KV "SUBS" / 시크릿: GH_TOKEN(선택, 워크플로 실행 권한)
-import { handleAccount, linkDevice, unlinkDevice } from './account.js'; // 카카오 로그인·기기 동기화 (/auth/kakao, /me, /logout)
+import { handleAccount, linkDevice, unlinkDevice, sweepAccounts } from './account.js'; // 카카오 로그인·기기 동기화 (/auth/kakao, /me, /logout)
 const SITE = 'https://hoopguest.kro.kr';
 const REPO = 'jodandan/hoopguest';
 const WORKFLOW = 'scrape.yml';
 // 사이트 HTTPS 인증서 발급 전·장애 시에도 읽히도록 저장소 원본을 직접 읽는다
 const DATA_URL = `https://raw.githubusercontent.com/${REPO}/main/docs/data.json`;
-const ORIGINS = [SITE, 'https://bdrguest.kro.kr', 'http://hoopguest.kro.kr', 'http://bdrguest.kro.kr', 'http://localhost:8766'];
+const ORIGINS = [SITE];
+// 브라우저 푸시 서비스 주소만 구독으로 받는다 (아무 주소나 넣어 가짜 구독을 쌓지 못하게)
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^(updates\.)?push\.services\.mozilla\.com$/, /^[a-z0-9-]+\.notify\.windows\.com$/, /^web\.push\.apple\.com$/];
+const pushEndpoint = e => { try { const u = new URL(e); return u.protocol === 'https:' && PUSH_HOSTS.some(r => r.test(u.hostname)); } catch { return false; } };
 
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const enc = s => new TextEncoder().encode(s);
@@ -115,14 +118,15 @@ export async function checkAndPush(env, now = Date.now()) {
   const seen = new Set((await env.SUBS.get('seen', 'json')) || []);
   const first = seen.size === 0;
   const fresh = first ? [] : live.filter(p => !seen.has(p.key) && now - Date.parse(p.posted) < 9 * 3600e3);
-  await env.SUBS.put('seen', JSON.stringify(live.map(p => p.key).slice(0, 2000)));
+  const seenNext = live.map(p => p.key).slice(0, 2000);
+  if (JSON.stringify(seenNext) !== JSON.stringify([...seen])) await env.SUBS.put('seen', JSON.stringify(seenNext)).catch(e => console.log('seen put', String(e))); // 바뀔 때만 저장, 실패해도 알림은 계속
   if (!fresh.length) return { fresh: 0, first };
   const v = await vapid(env);
   let sent = 0, removed = 0;
   for (const s of await listSubs(env)) {
     if (!fresh.some(p => matches(s.filters, p))) continue;
     const st = await push(v, s.sub).catch(() => 0);
-    if (st === 404 || st === 410) { await env.SUBS.delete(s.id); removed++; }
+    if (st === 404 || st === 410 || st === 403) { await env.SUBS.delete(s.id).catch(() => {}); await unlinkDevice(env, s.id).catch(() => {}); removed++; } // 없어진·키가 안 맞는 구독 정리
     else if (st >= 200 && st < 300) sent++;
   }
   return { fresh: fresh.length, sent, removed };
@@ -147,7 +151,7 @@ export default {
       if (url.pathname === '/subscribe' && req.method === 'POST') {
         const body = await req.json();
         const sub = body.subscription;
-        if (!sub?.endpoint || !/^https:\/\//.test(sub.endpoint) || JSON.stringify(body).length > 4000) return json(req, { error: 'bad request' }, 400);
+        if (!sub?.endpoint || !pushEndpoint(sub.endpoint) || JSON.stringify(body).length > 4000) return json(req, { error: 'bad request' }, 400);
         const id = 'sub:' + await sha(sub.endpoint);
         await env.SUBS.put(id, JSON.stringify({ sub: { endpoint: sub.endpoint }, filters: cleanFilters(body.filters), label: str(body.label, 80), query: str(body.query, 300), at: Date.now() }));
         const linked = await linkDevice(req, env, id).catch(() => null); // 로그인 중이면 계정에 묶음
@@ -160,7 +164,7 @@ export default {
       }
       if (url.pathname === '/sub-state' && req.method === 'POST') {
         const { endpoint } = await req.json();
-        const v = typeof endpoint === 'string' && /^https:\/\//.test(endpoint) ? await env.SUBS.get('sub:' + await sha(endpoint), 'json') : null;
+        const v = typeof endpoint === 'string' && pushEndpoint(endpoint) ? await env.SUBS.get('sub:' + await sha(endpoint), 'json') : null;
         if (!v) return json(req, { error: 'not found' }, 404);
         return json(req, { filters: v.filters || {}, label: v.label || '', query: v.query || '' });
       }
@@ -174,9 +178,10 @@ export default {
     const now = event.scheduledTime || Date.now();
     const min = new Date(now).getUTCMinutes();
     ctx.waitUntil((async () => {
-      const r = await checkAndPush(env, now);
-      console.log('push', JSON.stringify(r));
-      console.log('dispatch', await dispatchScrape(env));
+      // 한 단계가 실패해도 나머지는 돈다 (알림 실패가 수집 요청을 막지 않게)
+      try { console.log('push', JSON.stringify(await checkAndPush(env, now))); } catch (e) { console.log('push error', String(e)); }
+      try { console.log('dispatch', await dispatchScrape(env)); } catch (e) { console.log('dispatch error', String(e)); }
+      if (min < 5) { try { await sweepAccounts(env); } catch (e) { console.log('sweep error', String(e)); } } // 한 시간에 한 번 계정 표 정리
     })());
   },
 };

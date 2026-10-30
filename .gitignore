@@ -1,1 +1,8 @@
 promo/out/
+
+# 로컬 비밀값·빌드 산출물 (공개 저장소에 올라가지 않게)
+.env
+.env.*
+.dev.vars
+worker/.wrangler/
+node_modules/
