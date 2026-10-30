@@ -450,9 +450,9 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   // 운영자 기기 집계 제외: ?noga=1 로 한 번 열면 이 기기(브라우저)는 GA를 안 불러옴, ?noga=0 으로 해제
   var NOGA = false;
   try { var ng = /[?&]noga=([01])\b/.exec(location.search);
-    if (ng) { if (ng[1] === '1') localStorage.setItem('bdr.noga', '1'); else localStorage.removeItem('bdr.noga');
-      history.replaceState(null, '', location.pathname + location.hash);
-      setTimeout(function () { alert(ng[1] === '1' ? '이 기기는 이제 방문 통계(GA)에서 빠집니다.' : '이 기기도 다시 방문 통계(GA)에 잡힙니다.'); }, 300); }
+    if (ng) { history.replaceState(null, '', location.pathname + location.hash);
+      if (ng[1] === '1') { if (confirm('이 기기를 방문 통계(GA)에서 뺄까요? (운영자용)')) localStorage.setItem('bdr.noga', '1'); }
+      else { localStorage.removeItem('bdr.noga'); setTimeout(function () { alert('이 기기도 다시 방문 통계(GA)에 잡힙니다.'); }, 300); } }
     NOGA = localStorage.getItem('bdr.noga') === '1'; } catch (e) {}
   if (!NOGA && /^G-[A-Z0-9]{6,}$/.test(GA_ID) && GA_ID !== 'G-XXXXXXXXXX' && location.hostname === 'hoopguest.kro.kr') {
     const s = document.createElement('script'); s.async = true;
@@ -906,7 +906,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     const nav = !place ? '' : app ? `<a class="nav" href="${esc(mapUrl(app, place))}" target="_blank" rel="noopener" data-key="${esc(p.key)}" data-app="${app}" data-place="${esc(place)}" title="${esc(place)} — ${MAPS[app]}에서 열기">${AI.pin}길찾기<span class="sr"> ${esc(place)} (${MAPS[app]}, 새 창)</span></a>` : `<button class="nav" type="button" data-key="${esc(p.key)}" aria-expanded="false" aria-label="${esc(place)} 길찾기">${AI.pin}길찾기</button>`;
     const rep = reported.has(p.key) ? '<span>신고됨</span>' : `<button class="rep" type="button" data-key="${esc(p.key)}" aria-expanded="false" aria-label="정보가 틀렸나요? 알려주기">정보 오류</button>`;
     const seen = seenPosts.has(p.key) && !saved.has(p.key);
-    const dupHtml = dup.length ? `<details class="dup"><summary>비슷한 글 ${dup.length}건 더</summary>${dup.map(q => `<a href="${esc(q.url)}" target="_blank" rel="noopener" class="title dupt" data-key="${esc(q.key)}">${esc(unent(q.title))}</a><span class="dupm"><b class="srcm ${q.src === 'naver' ? 'nv' : 'dm'}">${srcName(q)}</b> · ${ago(q.posted)} · 조회 ${q.views ?? 0}</span>`).join('')}</details>` : '';
+    const dupHtml = dup.length ? `<details class="dup"><summary>비슷한 글 ${dup.length}건 더</summary>${dup.map(q => `<a href="${esc(q.url)}" target="_blank" rel="noopener" class="title dupt" data-key="${esc(q.key)}">${esc(unent(q.title))}</a><span class="dupm"><b class="srcm ${q.src === 'naver' ? 'nv' : 'dm'}">${srcName(q)}</b> · ${ago(q.posted)} · 조회 ${Number(q.views) || 0}</span>`).join('')}</details>` : '';
     const acts = `${p.closed ? '' : nav}${p.closed ? '' : shr}${ics}`, op = OPEN.has(p.key);
     const more = acts || dupHtml ? `<button class="more" type="button" data-key="${esc(p.key)}" aria-expanded="${op}" aria-label="길찾기·공유·캘린더 ${op ? '접기' : '펼치기'}">${CHEV}</button>` : '';
     return `<article class="card${p.closed ? ' closed' : ''}${seen ? ' seen' : ''}${FRESH.has(p.key) ? ' fresh' : ''}${op ? ' open' : ''}${isLive(p) ? ' live' : ''}" data-key="${esc(p.key)}">
@@ -914,7 +914,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
       <div class="body">
         <div class="tags">${tags.join('')}</div>
         <a class="title" href="${esc(p.url)}" target="_blank" rel="noopener" data-key="${esc(p.key)}" title="${esc(unent(p.title))}">${esc(cleanTitle(p))}<span class="sr">(새 창)</span></a>
-        <div class="sub"><span>${seen ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${srcName(p)}</b> · ${when}${ago(p.posted)} · 조회 ${p.views ?? 0}</span></div><div class="cacts">${acts}</div>${dupHtml}
+        <div class="sub"><span>${seen ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${srcName(p)}</b> · ${when}${ago(p.posted)} · 조회 ${Number(p.views) || 0}</span></div><div class="cacts">${acts}</div>${dupHtml}
       </div>
       <button class="star" type="button" data-key="${esc(p.key)}" aria-pressed="${on}" aria-label="${on ? '저장 해제' : '저장'}">${on ? '★' : '☆'}</button>${more}
       <span class="swipe" aria-hidden="true">${on ? '★ 저장<br>풀기' : '★<br>저장'}</span>
@@ -1321,8 +1321,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   function loadLeaflet() {
     if (window.L) return Promise.resolve();
     return leafletP ||= new Promise((ok, er) => {
-      const c = document.createElement('link'); c.rel = 'stylesheet'; c.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(c);
-      const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.onload = ok; s.onerror = er; document.head.appendChild(s);
+      const c = document.createElement('link'); c.rel = 'stylesheet'; c.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; c.integrity = 'sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw=='; c.crossOrigin = 'anonymous'; document.head.appendChild(c);
+      const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.integrity = 'sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g=='; s.crossOrigin = 'anonymous'; s.onload = ok; s.onerror = er; document.head.appendChild(s);
     });
   }
   // 연습경기 탭: 상대 팀 글 알림을 바로 켤 수 있게 안내 (이미 연습경기 알림을 받거나 닫았으면 안 보임)
@@ -1473,6 +1473,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     if (on) on.onclick = subscribePush;
     if (off) off.onclick = unsubscribePush;
   }
+  function sameKey(sub, raw) { try { const k = new Uint8Array(sub.options.applicationServerKey || []); return !k.length || (k.length === raw.length && k.every((b, i) => b === raw[i])); } catch { return true; } }
   async function subscribePush(preset, opt = {}) { // preset: 계정에 저장된 알림 조건으로 켤 때 / opt.silent: 안내 없이(로그인 직후 기기 연결 등)
     try {
       const perm = opt.silent ? Notification.permission : await Notification.requestPermission();
@@ -1481,7 +1482,9 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
       const { key } = await fetch(PUSH_API + '/vapid').then(r => r.json());
       const pad = '='.repeat((4 - key.length % 4) % 4);
       const raw = Uint8Array.from(atob((key + pad).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
-      const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
+      let sub = await reg.pushManager.getSubscription();
+      if (sub && !sameKey(sub, raw)) { await sub.unsubscribe().catch(() => {}); sub = null; } // 서버 알림 키가 바뀌면 새 키로 다시 구독
+      sub ||= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
       const pre = preset && preset.filters ? preset : null;
       const filters = pre ? pre.filters : pushFilters(), label = pre ? pre.label : pushLabel(), query = pre ? pre.query || '' : stateQuery();
       const tok = typeof authTok === 'function' ? authTok() : null; // 로그인 중이면 이 기기를 계정에 묶어 맞춤 알림 조건을 같이 받음
@@ -1797,7 +1800,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     renderAcctBtn(); if (!acctOn) return;
     const msg = store.get('bdr.authMsg', null); storeSet0('bdr.authMsg', null);
     if (msg === 'login') { const old = store.get('bdr.authOld', null); if (old) { storeSet0('bdr.authOld', null); fetch(PUSH_API + '/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + old } }).catch(() => {}); } toast('로그인했어요. 이 기기의 저장 글·설정을 계정과 합쳤어요'); track('login', { step: 'done' }); await pullSync(true); }
-    else if (msg === 'withdrawn:1') { toast('탈퇴했어요. 계정에 보관된 데이터를 모두 지웠어요'); track('login', { step: 'withdrawn' }); }
+    else if (msg === 'withdrawn:1') { try { const reg = await navigator.serviceWorker.ready; const s = await reg.pushManager.getSubscription(); if (s) await s.unsubscribe(); } catch {} store.set(PUSH_KEY, null); renderPush(); renderPushBtn(); toast('탈퇴했어요. 계정 데이터와 이 기기 알림을 모두 지웠어요'); track('login', { step: 'withdrawn' }); }
     else if (msg) toast('로그인하지 못했어요. 다시 시도해 주세요');
     else if (authTok()) await pullSync(false);
   })();
@@ -1807,7 +1810,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   fetch('/notice.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(n => {
     if (!n || !n.on || !n.text || store.get('bdr.noticeX', '') === n.id) return;
     const el = $('notice');
-    el.innerHTML = `<span>${esc(n.text)}</span>${n.link ? ` <a href="${esc(n.link)}" target="_blank" rel="noopener" id="noticeLink">${esc(n.linkText || '바로가기')}<span class="sr"> (새 창)</span></a>` : ''}<button class="noticex" type="button" id="noticeX" aria-label="공지 닫기">✕</button>`;
+    el.innerHTML = `<span>${esc(n.text)}</span>${n.link && /^https:\/\//.test(n.link) ? ` <a href="${esc(n.link)}" target="_blank" rel="noopener" id="noticeLink">${esc(n.linkText || '바로가기')}<span class="sr"> (새 창)</span></a>` : ''}<button class="noticex" type="button" id="noticeX" aria-label="공지 닫기">✕</button>`;
     el.hidden = false; track('notice', { id: n.id, act: 'view' });
     $('noticeX').onclick = () => { el.hidden = true; store.set('bdr.noticeX', n.id); track('notice', { id: n.id, act: 'close' }); };
     $('noticeLink')?.addEventListener('click', () => track('notice', { id: n.id, act: 'click' }));
