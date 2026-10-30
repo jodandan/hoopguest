@@ -2,8 +2,8 @@
 // - POST /subscribe, /unsubscribe : 웹 푸시 구독 저장/삭제 (알림 주소 + 조건만 저장)
 // - GET  /vapid                   : 푸시 공개키 (최초 요청 때 자동 생성해 KV에 보관)
 // - POST /sub-state               : 구독 주소로 지금 알림 조건(조건·이름·링크) 조회 — 서비스워커가 알림 만들 때 사용
-// - cron(10분마다)                : 사이트 data.json의 새 글 확인 → 조건 맞는 구독자에게 푸시
-//                                   + 매시 0·30분엔 GitHub 수집 워크플로 실행 요청
+// - cron(5분마다)                 : 사이트 data.json의 새 글 확인 → 조건 맞는 구독자에게 푸시
+//                                   + 매번 GitHub 수집 워크플로 실행 요청
 // 바인딩: KV "SUBS" / 시크릿: GH_TOKEN(선택, 워크플로 실행 권한)
 import { handleAccount, linkDevice, unlinkDevice } from './account.js'; // 카카오 로그인·기기 동기화 (/auth/kakao, /me, /logout)
 const SITE = 'https://hoopguest.kro.kr';

@@ -5,7 +5,7 @@ workers_dev = true
 preview_urls = false
 
 [triggers]
-crons = ["*/10 * * * *"]
+crons = ["*/5 * * * *"]
 
 [[kv_namespaces]]
 binding = "SUBS"

@@ -218,7 +218,7 @@ ${THEME_CSS}</style>
 ${posts.length ? CAFE_NOTE : ''}${list}
 ${trend}
 <section class="links">${links.map(([t, ls]) => `<h2>${esc(t)}</h2><p>${ls.map(([n, u]) => `<a href="${u}">${esc(n)}</a>`).join('')}</p>`).join('')}</section>
-<footer>다음카페 [BDR]동아리농구방과 네이버 카페 NSB 농심카페(운영진 허락)의 공개 글 제목만 모아 10분마다 확인해 갱신하는 비공식 사이트입니다. 비용·장소·연락처는 원문에서 확인하세요. 마지막 갱신: ${esc(new Date(Date.parse(updated) + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '))} (KST) · <a href="/guide/">농구 게스트 이용 가이드</a></footer>
+<footer>다음카페 [BDR]동아리농구방과 네이버 카페 NSB 농심카페(운영진 허락)의 공개 글 제목만 모아 5분마다 확인해 갱신하는 비공식 사이트입니다. 비용·장소·연락처는 원문에서 확인하세요. 마지막 갱신: ${esc(new Date(Date.parse(updated) + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '))} (KST) · <a href="/guide/">농구 게스트 이용 가이드</a></footer>
 <script>fetch('/notice.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null}).then(function(n){var el=document.getElementById('notice');if(!el||!n||!n.on||!n.text)return;try{if(JSON.parse(localStorage.getItem('bdr.noticeX')||'""')===n.id)return}catch(e){}var e=function(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};el.innerHTML='<span>'+e(n.text)+'</span>'+(n.link?' <a href="'+e(n.link)+'" target="_blank" rel="noopener">'+e(n.linkText||'바로가기')+'</a>':'')+'<button class="noticex" type="button" aria-label="공지 닫기">✕</button>';el.hidden=false;el.querySelector('.noticex').onclick=function(){el.hidden=true;try{localStorage.setItem('bdr.noticeX',JSON.stringify(n.id))}catch(e){}};if(window.gtag)gtag('event','notice',{id:n.id,act:'view',page_type:'sub'})}).catch(function(){})</script>
 </main></body></html>`;
 }
@@ -381,7 +381,7 @@ ${navHtml}</div>
 ${p.src === 'naver' ? '<p class="cm">원문은 네이버 카페 NSB 농심카페 회원만 볼 수 있어요. 회원이 아니면 <a href="https://m.cafe.naver.com/cornrow" rel="noopener">카페에 먼저 가입</a>해 주세요.</p>' : '<p class="cm">원문은 다음 카페 [BDR]동아리농구방 회원만 볼 수 있어요. 회원이 아니면 <a href="https://m.cafe.daum.net/dongarry" rel="noopener">카페에 먼저 가입</a>해 주세요.</p>'}
 <a class="b b2" href="${esc(more)}">${esc(p.region2 ? place : p.region1 || '수도권')} 다른 모집 글 더 보기</a>
 <script>(function(){var d=${JSON.stringify(p.date || '')},s=${JSON.stringify(p.start || '')},e=${JSON.stringify(p.end || '')};if(!d||!s||${p.closed || (p.date && p.date < today) ? 'true' : 'false'})return;function t(hm,add){var a=d.split('-').map(Number),b=hm.split(':').map(Number);return Date.UTC(a[0],a[1]-1,a[2],b[0]+(add||0),b[1])-324e5;}var st=t(s),en=e?t(e,e<s?24:0):st+72e5,n=Date.now(),o=document.getElementById('over');if(n>=en){o.textContent='이미 끝난 일정이에요. 아래에서 다른 글을 찾아보세요.';o.hidden=false;document.getElementById('go').textContent='카페 원문 보기';}else if(n>=st){o.textContent='이미 시작한 일정이에요. 늦참이 되는지 원문에서 확인하세요.';o.hidden=false;}})();</script>
-<p class="f">훕게스트는 다음카페 [BDR]동아리농구방과 네이버 NSB 농심카페(운영진 허락)의 농구 게스트·픽업게임·교류전 모집 글 제목을 모아 10분마다 확인해 갱신하는 비공식 사이트예요. 지역·날짜·시간대로 골라 보고, 새 글 알림도 받을 수 있어요.</p>
+<p class="f">훕게스트는 다음카페 [BDR]동아리농구방과 네이버 NSB 농심카페(운영진 허락)의 농구 게스트·픽업게임·교류전 모집 글 제목을 모아 5분마다 확인해 갱신하는 비공식 사이트예요. 지역·날짜·시간대로 골라 보고, 새 글 알림도 받을 수 있어요.</p>
 </main></body></html>`;
 }
 
@@ -543,7 +543,7 @@ export async function buildPages(data) {
       out.push([`/r/${s1}/${s}/`, page({ robots: thin ? 'noindex,follow' : '',
         path: `/r/${s1}/${s}/`, today, updated,
         title: `${nm} 농구 게스트 구인·구함 · 픽업게임 · 교류전 | 훕게스트`,
-        desc: `${dayLead(mine)}${nm} 농구 게스트 구인·구함·픽업게임·교류전 모집 글을 날짜·시간순으로 모아봐요.${mine.length ? ` 지금 ${mine.length}건` : ''}${mine.length < 3 && nearby.length ? `${mine.length ? ',' : ' 지금'} 근처 지역 ${Math.min(nearby.length, 10)}건` : ''}. 10분마다 확인해 갱신.`,
+        desc: `${dayLead(mine)}${nm} 농구 게스트 구인·구함·픽업게임·교류전 모집 글을 날짜·시간순으로 모아봐요.${mine.length ? ` 지금 ${mine.length}건` : ''}${mine.length < 3 && nearby.length ? `${mine.length ? ',' : ' 지금'} 근처 지역 ${Math.min(nearby.length, 10)}건` : ''}. 5분마다 확인해 갱신.`,
         h1: `${nm} 농구 게스트 · 픽업게임`,
         intro: mine.length >= 3 ? `${nm}에서 지금 모집 중인 농구 게스트·픽업게임·교류전 글 ${mine.length}건이에요.` : mine.length ? `${nm} 글 ${mine.length}건과 가까운 지역 글을 함께 보여 드려요.` : `${nm}에는 지금 모집 글이 없어요. 가까운 지역 글을 대신 보여 드려요.`,
         posts: mine.length >= 3 ? mine : [...mine, ...nearby.slice(0, 10).sort((x, y) => (x.date || '9999').localeCompare(y.date || '9999') || (x.start || '99').localeCompare(y.start || '99'))], // 근처 글은 10건까지만(이웃 지역 페이지끼리 내용이 겹치지 않게)
@@ -564,7 +564,7 @@ export async function buildPages(data) {
     out.push([g.path, page({ robots: gThin ? 'noindex,follow' : '',
       path: g.path, today, updated,
       title: `${g.name} 농구 게스트 · 픽업게임 (${area}) | 훕게스트`,
-      desc: `${area} ${g.name}에서 열리는 농구 게스트 구함·픽업게임·교류전 모집 글을 모아봐요. ${spanWord(today, hist.since)} ${g.rows.length}건${mine.length ? `, 지금 ${mine.length}건 모집 중` : ''}. 10분마다 확인해 갱신.`,
+      desc: `${area} ${g.name}에서 열리는 농구 게스트 구함·픽업게임·교류전 모집 글을 모아봐요. ${spanWord(today, hist.since)} ${g.rows.length}건${mine.length ? `, 지금 ${mine.length}건 모집 중` : ''}. 5분마다 확인해 갱신.`,
       h1: `${g.name} 농구 게스트 · 픽업게임`,
       intro: `${area} ${g.name}에서 열리는 농구 게스트·픽업게임·교류전 모집 글이에요. ${spanWord(today, hist.since)} 동안 ${g.rows.length}건이 올라왔어요.`,
       posts: mine,

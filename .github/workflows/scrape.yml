@@ -2,7 +2,7 @@ name: scrape
 
 on:
   schedule:
-    - cron: '7,37 * * * *'   # 예비용 30분마다 — 실제 10분 주기는 Cloudflare 워커가 dispatch (GitHub 스케줄은 지연이 잦음)
+    - cron: '7,37 * * * *'   # 예비용 30분마다 — 실제 5분 주기는 Cloudflare 워커가 dispatch (GitHub 스케줄은 지연이 잦음)
   workflow_dispatch:          # Actions 탭에서 수동 실행
 
 permissions:
