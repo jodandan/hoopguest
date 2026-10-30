@@ -435,8 +435,14 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 </style>
 <script>
   // 카카오 로그인에서 돌아오면 주소의 #login=… 을 GA보다 먼저 꺼내 저장하고 주소에서 지운다
-  (function () { var m = /^#(login|withdrawn|login_error)=([A-Za-z0-9_-]{1,80})$/.exec(location.hash); if (!m) return;
-    try { if (m[1] === 'login') localStorage.setItem('bdr.auth', JSON.stringify(m[2])); if (m[1] === 'withdrawn') localStorage.removeItem('bdr.auth'); localStorage.setItem('bdr.authMsg', JSON.stringify(m[1] === 'login' ? 'login' : m[1] + ':' + m[2])); } catch (e) {}
+  // 이 브라우저가 시작한 로그인·탈퇴(bdr.loginNonce 일치)만 받는다 — 남이 보낸 #login= 링크로 다른 계정이 심기지 않게
+  (function () { var m = /^#(login|withdrawn|login_error)=([A-Za-z0-9_-]{1,80})(?:&n=([A-Za-z0-9_-]{16,64}))?$/.exec(location.hash); if (!m) return;
+    try { var want = JSON.parse(localStorage.getItem('bdr.loginNonce') || 'null');
+      if (m[1] !== 'login_error' && (!want || m[3] !== want)) m = null;
+      if (m) { localStorage.removeItem('bdr.loginNonce');
+        if (m[1] === 'login') { var old = localStorage.getItem('bdr.auth'); if (old && JSON.parse(old) !== m[2]) localStorage.setItem('bdr.authOld', old); localStorage.setItem('bdr.auth', JSON.stringify(m[2])); }
+        if (m[1] === 'withdrawn') localStorage.removeItem('bdr.auth');
+        localStorage.setItem('bdr.authMsg', JSON.stringify(m[1] === 'login' ? 'login' : m[1] + ':' + m[2])); } } catch (e) {}
     history.replaceState(null, '', location.pathname + location.search); })();
   window.GA_ID = 'G-0DWSLR5007'; // GA4 측정 ID
   window.dataLayer = window.dataLayer || [];
@@ -553,7 +559,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     인천: '부평 37.507 126.722,남동 37.447 126.731,연수 37.410 126.678,계양 37.537 126.738,서해 37.533 126.652,검단 37.598 126.662,미추홀 37.464 126.651,제물포 37.474 126.632,영종 37.492 126.530',
     경기: '수원 37.264 127.029,성남 37.420 127.127,용인 37.280 127.120,고양 37.658 126.832,부천 37.503 126.766,안양 37.394 126.957,안산 37.322 126.831,화성 37.200 126.980,평택 36.992 127.113,의정부 37.738 127.034,남양주 37.636 127.217,시흥 37.380 126.803,파주 37.760 126.780,김포 37.615 126.716,광명 37.479 126.865,군포 37.362 126.935,하남 37.539 127.215,오산 37.150 127.077,이천 37.272 127.435,안성 37.008 127.280,구리 37.594 127.130,의왕 37.345 126.968,양주 37.785 127.046,포천 37.895 127.200,동두천 37.904 127.061,과천 37.429 126.988,여주 37.298 127.637,양평 37.492 127.488,가평 37.832 127.511,경기광주 37.429 127.255',
   };
-  const GEO = {}, GEO_R1 = {};
+  const GEO = Object.create(null), GEO_R1 = Object.create(null);
   for (const [r1, list] of Object.entries(GEO_RAW)) for (const it of list.split(',')) {
     const [n, la, lo] = it.split(' '); GEO[n] = [+la, +lo]; (GEO_R1[r1] ||= []).push(n);
   }
@@ -952,7 +958,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   }
   let PLACE_IDS = null; // 수집 때 카카오 장소 검색으로 확인한 '검색어 → 장소 ID'(places.json). null이면 확인 전 방식
   const placeFor = p => { const q = placeOf(unent(p.title), p.region2); return !q || !PLACE_IDS ? q : PLACE_IDS[q] ? q : null; };
-  const MAPS = { kakao: '카카오맵', naver: '네이버 지도' };
+  const MAPS = Object.assign(Object.create(null), { kakao: '카카오맵', naver: '네이버 지도' });
   function mapApp() { const a = store.get('bdr.mapApp', null); return MAPS[a] ? a : null; }
   function mapUrl(app, q) { return app === 'naver' ? `https://map.naver.com/p/search/${encodeURIComponent(q)}` : PLACE_IDS && PLACE_IDS[q] ? `https://map.kakao.com/link/to/${PLACE_IDS[q]}` : `https://map.kakao.com/link/search/${encodeURIComponent(q)}`; }
   function renderMapPref() {
@@ -1528,6 +1534,9 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 
   // ---- 계정(카카오 로그인, 선택) — 저장한 글·설정·알림 조건을 기기끼리 동기화 (서버: 알림 서버 /auth/kakao, /me)
   const AUTH_KEY = 'bdr.auth';
+  const loginNonce = () => { let n = store.get('bdr.loginNonce', null);
+    if (typeof n !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(n)) { const a = crypto.getRandomValues(new Uint8Array(18)); n = btoa(String.fromCharCode(...a)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); store.set('bdr.loginNonce', n); }
+    return n; };
   const SYNC_KEYS = ['bdr.saved', 'bdr.fav', 'bdr.home', 'bdr.radius', 'bdr.mapApp', 'bdr.compact', 'bdr.hideClosed', 'bdr.alert', 'bdr.theme'];
   let acctOn = false, acctApplying = false, acctTimer = 0, acctLast = 0, acctBye = false, acctDevices = 0, acctEdit = null, acctAdmin = false;
   const authTok = () => store.get(AUTH_KEY, null);
@@ -1582,7 +1591,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     const up = all.filter(p => !p.closed && (!p.date || p.date >= TODAY)), past = all.filter(p => !up.includes(p));
     const gone = DATA.length ? [...saved].filter(k => !byKey.has(k)).length : 0;
     const ret = encodeURIComponent(location.origin + location.pathname);
-    const loginBtn = `<a class="kakao" id="myLogin" href="${PUSH_API}/auth/kakao?return=${ret}">카카오 로그인</a>`;
+    const loginBtn = `<a class="kakao" id="myLogin" href="${PUSH_API}/auth/kakao?n=${loginNonce()}&return=${ret}">카카오 로그인</a>`;
     const note = '<div class="note">카카오에서는 회원번호만 받고 이름·이메일은 받지 않아요. 서버에는 저장한 글 목록과 사이트 설정만 보관해요. <a href="/privacy/">개인정보 처리방침</a></div>';
     const al = store.get('bdr.alert', null), pushOn = !!store.get(PUSH_KEY, null), th = store.get('bdr.theme', null), ma = mapApp();
     const opt = (v, cur, label) => `<button class="chip sm" type="button" data-v="${v}" aria-pressed="${v === cur}">${label}</button>`;
@@ -1614,7 +1623,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     $('myTheme').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; store.set('bdr.theme', b.dataset.v || null); applyTheme(); track('theme_toggle', { to: b.dataset.v || 'system', from: 'my' }); render(); };
     if (on) {
       $('acctOut').onclick = async () => { try { await acctApi('/logout', { method: 'POST' }); } catch {} store.set(AUTH_KEY, null); acctEdit = null; acctDevices = 0; track('login', { step: 'logout' }); toast('로그아웃했어요. 이 기기의 저장 글·설정은 그대로 남아요'); renderAcct(); };
-      $('acctBye').onclick = () => { if (!acctBye) { acctBye = true; return render(); } track('login', { step: 'withdraw' }); location.href = `${PUSH_API}/auth/kakao?mode=withdraw&return=${ret}`; };
+      $('acctBye').onclick = () => { if (!acctBye) { acctBye = true; return render(); } track('login', { step: 'withdraw' }); location.href = `${PUSH_API}/auth/kakao?mode=withdraw&n=${loginNonce()}&return=${ret}`; };
       renderAlertBox(al, pushOn);
     }
   }
@@ -1641,7 +1650,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     const ret = encodeURIComponent(location.origin + location.pathname + location.search);
     const note = '<div class="note">카카오에서는 회원번호만 받고 이름·이메일은 받지 않아요. 서버에는 저장한 글 목록과 사이트 설정만 보관해요. <a href="/privacy/">개인정보 처리방침</a></div>';
     if (!authTok()) {
-      box.innerHTML = `<b>카카오로 로그인하면</b> 저장한 글(☆)과 내 동네·보기 설정·알림 조건을 폰과 PC에서 같이 쓸 수 있어요. 로그인은 선택이에요.<div class="acts"><a class="kakao" id="acctLogin" href="${PUSH_API}/auth/kakao?return=${ret}">카카오 로그인</a></div>${note}`;
+      box.innerHTML = `<b>카카오로 로그인하면</b> 저장한 글(☆)과 내 동네·보기 설정·알림 조건을 폰과 PC에서 같이 쓸 수 있어요. 로그인은 선택이에요.<div class="acts"><a class="kakao" id="acctLogin" href="${PUSH_API}/auth/kakao?n=${loginNonce()}&return=${ret}">카카오 로그인</a></div>${note}`;
       $('acctLogin').onclick = () => track('login', { step: 'start' });
       if (!MY) box.insertAdjacentHTML('beforeend', '<a class="myl" href="/my/">로그인 없이 저장한 글·설정 보기 →</a>');
       return;
@@ -1651,7 +1660,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
       + '<div class="acctal" id="acctAl"></div>'
       + `<div class="acts"><button class="chip" id="acctOut" type="button">로그아웃</button><button class="chip" id="acctBye" type="button">${acctBye ? '한 번 더 누르면 카카오 확인 후 계정 데이터를 지워요' : '탈퇴하고 데이터 지우기'}</button></div>${note}`;
     $('acctOut').onclick = async () => { try { await acctApi('/logout', { method: 'POST' }); } catch {} store.set(AUTH_KEY, null); acctEdit = null; acctDevices = 0; track('login', { step: 'logout' }); toast('로그아웃했어요. 이 기기의 저장 글·설정은 그대로 남아요'); renderAcct(); };
-    $('acctBye').onclick = () => { if (!acctBye) { acctBye = true; return renderAcct(); } track('login', { step: 'withdraw' }); location.href = `${PUSH_API}/auth/kakao?mode=withdraw&return=${ret}`; };
+    $('acctBye').onclick = () => { if (!acctBye) { acctBye = true; return renderAcct(); } track('login', { step: 'withdraw' }); location.href = `${PUSH_API}/auth/kakao?mode=withdraw&n=${loginNonce()}&return=${ret}`; };
     renderAlertBox(al, pushOn);
   }
 
@@ -1787,7 +1796,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     try { const r = await fetch(PUSH_API + '/me', { headers: authTok() ? { Authorization: 'Bearer ' + authTok() } : {} }); acctOn = r.status === 401 || r.ok; } catch { acctOn = false; }
     renderAcctBtn(); if (!acctOn) return;
     const msg = store.get('bdr.authMsg', null); storeSet0('bdr.authMsg', null);
-    if (msg === 'login') { toast('로그인했어요. 이 기기의 저장 글·설정을 계정과 합쳤어요'); track('login', { step: 'done' }); await pullSync(true); }
+    if (msg === 'login') { const old = store.get('bdr.authOld', null); if (old) { storeSet0('bdr.authOld', null); fetch(PUSH_API + '/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + old } }).catch(() => {}); } toast('로그인했어요. 이 기기의 저장 글·설정을 계정과 합쳤어요'); track('login', { step: 'done' }); await pullSync(true); }
     else if (msg === 'withdrawn:1') { toast('탈퇴했어요. 계정에 보관된 데이터를 모두 지웠어요'); track('login', { step: 'withdrawn' }); }
     else if (msg) toast('로그인하지 못했어요. 다시 시도해 주세요');
     else if (authTok()) await pullSync(false);
