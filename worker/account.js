@@ -7,6 +7,7 @@
 // 맞춤 알림: 로그인한 채 알림을 켠 기기는 devices(sid → uid)로 계정에 묶이고, 계정의 알림 조건(data.alert)이 바뀌면
 //           worker.js가 넘겨준 onAlert로 묶인 기기 구독 조건을 모두 바꾼다
 // 저장소: D1 "DB" — users(uid, data, updated, created) · sessions(th, uid, created) · logins(state, ret, mode, n, uid, created) · devices(sid, uid, th, created) · meta(k, v)
+//        + 알림용(remind.js): reminders · rl(횟수 제한) · kvdel(탈퇴 기기 구독 삭제 대기열) · meta의 'vapid'(서명 키)·'lease'(cron 겹침 방지)·'rr'(새 글 알림 이어 보내기)
 // 개인정보: 카카오에서 받는 건 회원번호뿐. 서버엔 '비밀 소금 + 회원번호'의 SHA-256 값(uid)만 저장하고,
 //           회원번호 원문·이름·이메일·카카오 토큰은 저장하지 않는다. 로그인 토큰도 해시로만 보관.
 // 시크릿: KAKAO_REST_KEY(로그인에 쓸 REST API 키) / 선택: KAKAO_CLIENT_SECRET(카카오 콘솔에서 켰을 때만)
@@ -21,6 +22,8 @@ const rand = n => b64u(crypto.getRandomValues(new Uint8Array(n)));
 const sha = async s => b64u(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
 
 let ready = null;
+// 첫 요청 때 테이블 자동 생성 (worker.js·remind.js도 이 함수를 씀)
+export function dbInit(env) { return init(env); }
 function init(env) {
   if (!ready) ready = env.DB.batch([
     env.DB.prepare('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)'),
@@ -32,16 +35,43 @@ function init(env) {
     env.DB.prepare('CREATE INDEX IF NOT EXISTS contacts_ih ON contacts (ih, created)'),
     env.DB.prepare('CREATE INDEX IF NOT EXISTS sessions_uid ON sessions (uid)'),
     env.DB.prepare('CREATE INDEX IF NOT EXISTS devices_uid ON devices (uid)'),
+    // 저장 글 리마인더 (sh = 구독 해시, 시각은 ms). 부분 인덱스라 cron은 아직 안 보낸 행만 훑는다
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS reminders (sh TEXT NOT NULL, k TEXT NOT NULL, title TEXT NOT NULL, start_at INTEGER NOT NULL, due_at INTEGER NOT NULL, sent_at INTEGER, dlv_at INTEGER, tries INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sh, k))'),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS reminders_due ON reminders (due_at) WHERE sent_at IS NULL AND dlv_at IS NULL'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS rl (k TEXT PRIMARY KEY, win INTEGER NOT NULL, n INTEGER NOT NULL, at INTEGER NOT NULL)'),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS kvdel (sid TEXT PRIMARY KEY)'),
   ]).then(() => env.DB.prepare("ALTER TABLE logins ADD COLUMN n TEXT NOT NULL DEFAULT ''").run().catch(() => {})) // 예전 표에 n·uid 칸 추가(이미 있으면 무시)
     .then(() => env.DB.prepare("ALTER TABLE logins ADD COLUMN uid TEXT NOT NULL DEFAULT ''").run().catch(() => {}))
     .catch(e => { ready = null; throw e; });
   return ready;
 }
+let saltCache = null; // 소금은 바뀌지 않으므로 인스턴스당 1번만 읽음
 export async function salt(env) {
-  const row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first();
-  if (row) return row.v;
-  await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('salt', ?)").bind(rand(32)).run();
-  return (await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first()).v;
+  if (saltCache) return saltCache;
+  let row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first();
+  if (!row) {
+    await env.DB.prepare("INSERT OR IGNORE INTO meta (k, v) VALUES ('salt', ?)").bind(rand(32)).run();
+    row = await env.DB.prepare("SELECT v FROM meta WHERE k = 'salt'").first();
+  }
+  return (saltCache = row.v);
+}
+// 접속지(IP) 해시 — 횟수 제한용. IP 원문은 저장하지 않음 (문의하기와 같은 방식)
+// IPv6는 한 사용자(회선)가 /64 대역을 통째로 받는 경우가 많아 /64로 묶고, 더 큰 /48도 따로 셈. IPv4는 주소 그대로(/32)
+export function ipPrefix(ip) {
+  ip = String(ip || '').trim().toLowerCase();
+  if (!ip.includes(':')) return { p: ip || '-', p48: null };
+  const m = /::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(ip); if (m) return { p: m[1], p48: null };
+  const [a, b = null] = ip.split('::');
+  const A = a ? a.split(':') : [], B = b == null ? [] : b ? b.split(':') : [];
+  const full = b == null ? A : [...A, ...Array(Math.max(0, 8 - A.length - B.length)).fill('0'), ...B];
+  const g = full.slice(0, 8).map(x => (parseInt(x, 16) || 0).toString(16));
+  return { p: g.slice(0, 4).join(':') + '::/64', p48: g.slice(0, 3).join(':') + '::/48' };
+}
+export async function ipKeys(req, env) {
+  await init(env);
+  const { p, p48 } = ipPrefix(req.headers.get('CF-Connecting-IP'));
+  const s = await salt(env);
+  return { ih: await sha(p + ':' + s), ih48: p48 ? await sha(p48 + ':' + s) : null };
 }
 function safeReturn(r) {
   try { const u = new URL(r); if (u.origin === SITE && RETURN_PATHS.includes(u.pathname)) return SITE + u.pathname + (u.search.length <= MAX_RET_QS ? u.search : ''); } catch {}
@@ -62,12 +92,14 @@ export async function linkDevice(req, env, sid) {
   if (!env.DB) return null;
   await init(env);
   const u = await who(req, env);
-  if (u) await env.DB.batch([
-    env.DB.prepare('INSERT OR REPLACE INTO devices (sid, uid, th, created) VALUES (?, ?, ?, ?)').bind(sid, u.uid, u.th, Date.now()),
-    // 계정당 연결 기기 MAX_DEVICES대까지 — 넘으면 가장 오래된 연결을 끊음(그 기기 알림은 계정 없이 계속 옴) → 탈퇴 때 기기 구독을 빠짐없이 지울 수 있게
-    env.DB.prepare('DELETE FROM devices WHERE uid = ? AND sid NOT IN (SELECT sid FROM devices WHERE uid = ? ORDER BY created DESC LIMIT ?)').bind(u.uid, u.uid, MAX_DEVICES),
-  ]);
-  else await env.DB.prepare('DELETE FROM devices WHERE sid = ?').bind(sid).run();
+  const cur = await env.DB.prepare('SELECT uid, th FROM devices WHERE sid = ?').bind(sid).first();
+  if (u) {
+    if (!cur || cur.uid !== u.uid || cur.th !== u.th) await env.DB.batch([ // 이미 같은 계정·세션으로 묶여 있으면 쓰기 생략
+      env.DB.prepare('INSERT OR REPLACE INTO devices (sid, uid, th, created) VALUES (?, ?, ?, ?)').bind(sid, u.uid, u.th, Date.now()),
+      // 계정당 연결 기기 MAX_DEVICES대까지 — 넘으면 가장 오래된 연결을 끊음(그 기기 알림은 계정 없이 계속 옴) → 탈퇴 때 기기 구독을 빠짐없이 지울 수 있게
+      env.DB.prepare('DELETE FROM devices WHERE uid = ? AND sid NOT IN (SELECT sid FROM devices WHERE uid = ? ORDER BY created DESC LIMIT ?)').bind(u.uid, u.uid, MAX_DEVICES),
+    ]);
+  } else if (cur) await env.DB.prepare('DELETE FROM devices WHERE sid = ?').bind(sid).run();
   return !!u;
 }
 // 주기 정리(크론): 끝나지 않은 로그인 시작 기록·만료 세션·세션 없는 기기 연결
@@ -81,11 +113,6 @@ export async function sweepAccounts(env) {
     env.DB.prepare('DELETE FROM devices WHERE th NOT IN (SELECT th FROM sessions)'),
     env.DB.prepare('DELETE FROM contacts WHERE (done > 0 AND done < ?) OR created < ?').bind(now - CONTACT_DONE_MS, now - CONTACT_MAX_MS), // 문의: 처리 후 6개월, 처리 안 했어도 받은 지 1년
   ]);
-}
-export async function unlinkDevice(env, sid) {
-  if (!env.DB) return;
-  await init(env);
-  await env.DB.prepare('DELETE FROM devices WHERE sid = ?').bind(sid).run();
 }
 
 // 계정 경로가 아니면 null을 돌려준다 (worker.js의 나머지 경로로 넘어감)
@@ -143,9 +170,13 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     if (st.mode === 'withdraw') {
       if (!st.uid || st.uid !== uid) return back(st.ret, 'login_error=mismatch'); // 탈퇴를 시작한 계정과 카카오에서 다시 로그인한 계정이 같을 때만 삭제
       await fetch('https://kapi.kakao.com/v1/user/unlink', { method: 'POST', headers: auth }).catch(() => {});
-      const { results: devs } = await env.DB.prepare('SELECT sid FROM devices WHERE uid = ?').bind(uid).all();
-      if (env.SUBS) for (const d of (devs || []).slice(0, 200)) await env.SUBS.delete(d.sid).catch(() => {}); // 계정에 묶였던 기기의 알림 구독도 삭제(연결은 계정당 MAX_DEVICES대로 제한되어 전부 지워짐)
-      await env.DB.batch([env.DB.prepare('DELETE FROM users WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM sessions WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM devices WHERE uid = ?').bind(uid)]);
+      // 계정에 묶였던 기기의 알림 구독도 삭제: 키를 대기열(kvdel)에 넣고(데이터 삭제와 한 트랜잭션) 이 요청에서 최대 400개 지움,
+      // 남은 건 매시 정리가 이어서 (기기 연결은 계정당 MAX_DEVICES대라 보통 이 요청에서 끝남)
+      await env.DB.batch([
+        env.DB.prepare('INSERT OR IGNORE INTO kvdel (sid) SELECT sid FROM devices WHERE uid = ?').bind(uid),
+        env.DB.prepare('DELETE FROM reminders WHERE sh IN (SELECT substr(sid, 5) FROM devices WHERE uid = ?)').bind(uid),
+        env.DB.prepare('DELETE FROM users WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM sessions WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM devices WHERE uid = ?').bind(uid)]);
+      if (hooks.drainKvDel) await hooks.drainKvDel(400).catch(e => console.log('withdraw kv', String(e && e.message || e)));
       return back(st.ret, 'withdrawn=1' + (st.n ? '&n=' + st.n : ''));
     }
     const now = Date.now(), t = rand(32);
@@ -190,7 +221,7 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     const alert = body.data.alert, oldAlert = old ? (JSON.parse(old.data || '{}').alert || null) : null;
     if (hooks.onAlert && alert && typeof alert === 'object' && alert.filters && JSON.stringify(alert) !== JSON.stringify(oldAlert)) {
       const { results } = await env.DB.prepare('SELECT sid FROM devices WHERE uid = ?').bind(u.uid).all();
-      synced = await hooks.onAlert((results || []).map(r => r.sid), alert);
+      synced = await hooks.onAlert((results || []).map(r => r.sid), alert, u.uid);
     }
     return json(req, { ok: true, updated: now, synced });
   }
