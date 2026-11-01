@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "훕게스트 — 농구 게스트 모아보기",
   "short_name": "훕게스트",
   "description": "농구 게스트·픽업게임·연습경기 글을 지역·날짜·시간대로 모아보기",
@@ -8,9 +9,31 @@
   "background_color": "#E9D4B0",
   "theme_color": "#CF3326",
   "lang": "ko",
+  "categories": ["sports", "lifestyle"],
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "게스트 구인",
+      "short_name": "게스트",
+      "url": "/?b=guest",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "연습경기",
+      "short_name": "연습경기",
+      "url": "/?b=match",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "마이페이지",
+      "short_name": "마이",
+      "url": "/my/",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
   ]
 }
