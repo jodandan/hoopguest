@@ -11,6 +11,7 @@
 // 개인정보: 카카오에서 받는 건 회원번호뿐. 서버엔 '비밀 소금 + 회원번호'의 SHA-256 값(uid)만 저장하고,
 //           회원번호 원문·이름·이메일·카카오 토큰은 저장하지 않는다. 로그인 토큰도 해시로만 보관.
 // 시크릿: KAKAO_REST_KEY(로그인에 쓸 REST API 키) / 선택: KAKAO_CLIENT_SECRET(카카오 콘솔에서 켰을 때만)
+import { limitAll } from './remind.js'; // 횟수 제한(D1 rl, 원자적)
 const SITE = 'https://hoopguest.kro.kr';
 const ADMIN_UID = 'FfLxir2WfmLQg7tgKd_4mBMDRwyFPbWUFXuqOwei8E8'; // 운영자 계정 식별자(해시값) — 문의함을 볼 수 있는 계정
 const RETURN_PATHS = ['/', '/my/']; // 로그인 후 돌아갈 수 있는 곳 — 이 사이트의 첫 화면·마이페이지만 (토큰이 다른 페이지·도메인으로 새지 않게)
@@ -94,11 +95,15 @@ export async function linkDevice(req, env, sid) {
   const u = await who(req, env);
   const cur = await env.DB.prepare('SELECT uid, th FROM devices WHERE sid = ?').bind(sid).first();
   if (u) {
-    if (!cur || cur.uid !== u.uid || cur.th !== u.th) await env.DB.batch([ // 이미 같은 계정·세션으로 묶여 있으면 쓰기 생략
+    if (!cur || cur.uid !== u.uid || cur.th !== u.th) {
+      // 계정당 기기 연결 변경 시간당 30회까지(D1 쓰기 보호) — 넘으면 이번엔 연결하지 않음(알림 구독 자체는 그대로)
+      if (await limitAll(env, [{ k: 'dl:' + u.uid, ms: 3600e3, max: 30, cost: 1 }])) return false;
+      await env.DB.batch([ // 이미 같은 계정·세션으로 묶여 있으면 쓰기 생략
       env.DB.prepare('INSERT OR REPLACE INTO devices (sid, uid, th, created) VALUES (?, ?, ?, ?)').bind(sid, u.uid, u.th, Date.now()),
       // 계정당 연결 기기 MAX_DEVICES대까지 — 넘으면 가장 오래된 연결을 끊음(그 기기 알림은 계정 없이 계속 옴) → 탈퇴 때 기기 구독을 빠짐없이 지울 수 있게
       env.DB.prepare('DELETE FROM devices WHERE uid = ? AND sid NOT IN (SELECT sid FROM devices WHERE uid = ? ORDER BY created DESC LIMIT ?)').bind(u.uid, u.uid, MAX_DEVICES),
-    ]);
+      ]);
+    }
   } else if (cur) await env.DB.prepare('DELETE FROM devices WHERE sid = ?').bind(sid).run();
   return !!u;
 }
@@ -124,14 +129,26 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
   await init(env);
   // 사이트 안 문의하기 (로그인 필요 없음) — 운영자만 봄, 같은 접속지에서 1시간 5건까지
   if (p === '/contact' && req.method === 'POST') {
+    // 이 사이트에서 보낸 JSON 요청만 (다른 사이트의 폼·text/plain 교차 요청으로 문의함을 채우지 못하게)
+    if (req.headers.get('Origin') !== SITE) return json(req, { error: 'forbidden' }, 403);
+    if (!/^application\/json\b/i.test(req.headers.get('Content-Type') || '')) return json(req, { error: 'bad request' }, 415);
     let b; try { b = await req.json(); } catch { return json(req, { error: 'bad request' }, 400); }
     if (!b || b.hp) return json(req, { ok: true }); // 자동 입력 봇은 조용히 무시
     const kind = ['delete', 'error', 'idea', 'etc'].includes(b.kind) ? b.kind : 'etc';
     const body = String(b.body || '').trim().slice(0, 2000), reply = String(b.reply || '').trim().slice(0, 100), page = String(b.page || '').slice(0, 300);
     if (body.length < 5) return json(req, { error: 'too short' }, 400);
-    const now = Date.now(), ih = await sha((req.headers.get('CF-Connecting-IP') || '-') + ':' + await salt(env));
+    // 접속지(IPv4 주소·IPv6 /64) 시간당 5건, IPv6 /48 시간당 20건, 전체 하루 200건
+    const now = Date.now(), ip = await ipKeys(req, env), ih = ip.ih;
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM contacts WHERE ih = ? AND created > ?').bind(ih, now - 3600e3).first();
-    if (n && n.n >= 5) return json(req, { error: 'too many' }, 429);
+    if (n && n.n >= 5) return json(req, { error: 'too many', code: 'rate' }, 429);
+    const rules = [{ k: 'cg', ms: 864e5, max: 200, cost: 1 }];
+    if (ip.ih48) rules.push({ k: 'c48:' + ip.ih48, ms: 3600e3, max: 20, cost: 1 });
+    if (await limitAll(env, rules, now)) {
+      // 전체 하루 상한이 찼으면 'full'(누구도 못 보냄), 아니면 이 접속지 제한 'rate'
+      const g = await env.DB.prepare("SELECT win, n FROM rl WHERE k = 'cg'").first().catch(() => null);
+      const full = g && g.win === Math.floor(now / 864e5) && g.n >= 200;
+      return json(req, { error: 'too many', code: full ? 'full' : 'rate' }, 429);
+    }
     await env.DB.batch([
       env.DB.prepare('INSERT INTO contacts (kind, body, reply, page, ih, created) VALUES (?, ?, ?, ?, ?, ?)').bind(kind, body, reply, page, ih, now),
       env.DB.prepare('DELETE FROM contacts WHERE (done > 0 AND done < ?) OR created < ?').bind(now - CONTACT_DONE_MS, now - CONTACT_MAX_MS), // 처리하고 6개월, 처리 안 했어도 1년 지난 문의 삭제
@@ -143,10 +160,18 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     const mode = 'login'; // 탈퇴는 로그인한 상태에서 POST /auth/withdraw 로만 시작(링크만으로 탈퇴 상태를 못 만들게)
     const state = rand(18), ret = safeReturn(url.searchParams.get('return') || ''), now = Date.now();
     const n = /^[A-Za-z0-9_-]{16,64}$/.test(url.searchParams.get('n') || '') ? url.searchParams.get('n') : '';
-    await env.DB.batch([
-      env.DB.prepare('DELETE FROM logins WHERE created < ?').bind(now - STATE_MS), // 끝나지 않은 로그인 시작 기록은 10분 뒤 정리
-      env.DB.prepare('INSERT INTO logins (state, ret, mode, n, created) VALUES (?, ?, ?, ?, ?)').bind(state, ret, mode, n, now),
-    ]);
+    // 로그인 시작 횟수: 접속지(/64) 시간당 30·하루 100, IPv6 /48 시간당 100·하루 300 (D1 쓰기 보호)
+    let ip; try { ip = await ipKeys(req, env); } catch (e) { return back(ret, 'login_error=server'); }
+    const lr = [{ k: 'ka:' + ip.ih, ms: 3600e3, max: 30, cost: 1 }, { k: 'kad:' + ip.ih, ms: 864e5, max: 100, cost: 1 }];
+    if (ip.ih48) lr.push({ k: 'ka48:' + ip.ih48, ms: 3600e3, max: 100, cost: 1 }, { k: 'ka48d:' + ip.ih48, ms: 864e5, max: 300, cost: 1 });
+    // D1 오류면 500 JSON 대신 사이트로 돌려보냄(#login_error=server) — 사용자가 빈 오류 화면에 남지 않게
+    try {
+      if (await limitAll(env, lr, now)) return back(ret, 'login_error=rate');
+      await env.DB.batch([
+        env.DB.prepare('DELETE FROM logins WHERE created < ?').bind(now - STATE_MS), // 끝나지 않은 로그인 시작 기록은 10분 뒤 정리
+        env.DB.prepare('INSERT INTO logins (state, ret, mode, n, created) VALUES (?, ?, ?, ?, ?)').bind(state, ret, mode, n, now),
+      ]);
+    } catch (e) { console.log('auth start d1', String(e && e.message || e)); return back(ret, 'login_error=server'); }
     const q = new URLSearchParams({ response_type: 'code', client_id: env.KAKAO_REST_KEY, redirect_uri: url.origin + '/auth/kakao/callback', state });
     return new Response(null, { status: 302, headers: { Location: 'https://kauth.kakao.com/oauth/authorize?' + q, 'Cache-Control': 'no-store' } });
   }
@@ -169,13 +194,15 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     const uid = await sha(`${await salt(env)}:${me.id}`);
     if (st.mode === 'withdraw') {
       if (!st.uid || st.uid !== uid) return back(st.ret, 'login_error=mismatch'); // 탈퇴를 시작한 계정과 카카오에서 다시 로그인한 계정이 같을 때만 삭제
-      await fetch('https://kapi.kakao.com/v1/user/unlink', { method: 'POST', headers: auth }).catch(() => {});
       // 계정에 묶였던 기기의 알림 구독도 삭제: 키를 대기열(kvdel)에 넣고(데이터 삭제와 한 트랜잭션) 이 요청에서 최대 400개 지움,
       // 남은 건 매시 정리가 이어서 (기기 연결은 계정당 MAX_DEVICES대라 보통 이 요청에서 끝남)
-      await env.DB.batch([
+      // 순서: D1 삭제 먼저 → 성공해야 카카오 연결 해제 (삭제 실패 시 연결은 그대로 두고 다시 시도하게)
+      try { await env.DB.batch([
         env.DB.prepare('INSERT OR IGNORE INTO kvdel (sid) SELECT sid FROM devices WHERE uid = ?').bind(uid),
         env.DB.prepare('DELETE FROM reminders WHERE sh IN (SELECT substr(sid, 5) FROM devices WHERE uid = ?)').bind(uid),
-        env.DB.prepare('DELETE FROM users WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM sessions WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM devices WHERE uid = ?').bind(uid)]);
+        env.DB.prepare('DELETE FROM users WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM sessions WHERE uid = ?').bind(uid), env.DB.prepare('DELETE FROM devices WHERE uid = ?').bind(uid)]); }
+      catch (e) { console.log('withdraw d1', String(e && e.message || e)); return back(st.ret, 'login_error=withdraw'); }
+      await fetch('https://kapi.kakao.com/v1/user/unlink', { method: 'POST', headers: auth }).catch(() => {});
       if (hooks.drainKvDel) await hooks.drainKvDel(400).catch(e => console.log('withdraw kv', String(e && e.message || e)));
       return back(st.ret, 'withdrawn=1' + (st.n ? '&n=' + st.n : ''));
     }
@@ -213,17 +240,21 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     const text = await req.text();
     if (text.length > MAX_DATA) return json(req, { error: 'too large' }, 413);
     let body; try { body = JSON.parse(text); } catch { return json(req, { error: 'bad request' }, 400); }
-    if (!body || typeof body.data !== 'object' || Array.isArray(body.data)) return json(req, { error: 'bad request' }, 400);
+    if (!body || typeof body !== 'object' || !body.data || typeof body.data !== 'object' || Array.isArray(body.data)) return json(req, { error: 'bad request' }, 400);
     const now = Date.now();
+    // 계정당 12분 창 60회 = 분당 최대 60·정시 기준 시간당 최대 300 — 기록 행 하나(쓰기 1행)로 두 한도를 함께 묶음
+    if (await limitAll(env, [{ k: 'mp:' + u.uid, ms: 720e3, max: 60, cost: 1 }], now)) return json(req, { error: 'too many', code: 'rate' }, 429);
     const old = await env.DB.prepare('SELECT data FROM users WHERE uid = ?').bind(u.uid).first();
-    await env.DB.prepare('UPDATE users SET data = ?, updated = ? WHERE uid = ?').bind(JSON.stringify(body.data), now, u.uid).run();
-    let synced = 0;
-    const alert = body.data.alert, oldAlert = old ? (JSON.parse(old.data || '{}').alert || null) : null;
+    let synced = 0, pending = false;
+    const data = body.data, alert = data.alert, oldAlert = old ? (JSON.parse(old.data || '{}').alert || null) : null;
     if (hooks.onAlert && alert && typeof alert === 'object' && alert.filters && JSON.stringify(alert) !== JSON.stringify(oldAlert)) {
       const { results } = await env.DB.prepare('SELECT sid FROM devices WHERE uid = ?').bind(u.uid).all();
       synced = await hooks.onAlert((results || []).map(r => r.sid), alert, u.uid);
+      // 기기 동기화가 한도로 거절되면 계정의 알림 조건은 예전 값으로 둠 → 다음 PUT에서 '바뀜'으로 다시 잡혀 재시도(조건이 영영 어긋나지 않게)
+      if (synced < 0) { pending = true; synced = 0; if (oldAlert) data.alert = oldAlert; else delete data.alert; }
     }
-    return json(req, { ok: true, updated: now, synced });
+    await env.DB.prepare('UPDATE users SET data = ?, updated = ? WHERE uid = ?').bind(JSON.stringify(data), now, u.uid).run();
+    return json(req, pending ? { ok: true, updated: now, synced, alertPending: true } : { ok: true, updated: now, synced });
   }
   if (p === '/logout' && req.method === 'POST') {
     await env.DB.batch([env.DB.prepare('DELETE FROM sessions WHERE th = ?').bind(u.th), env.DB.prepare('DELETE FROM devices WHERE th = ?').bind(u.th)]);

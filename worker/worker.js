@@ -122,7 +122,7 @@ function cleanFilters(f = {}) {
 }
 const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
 // 계정 알림 조건이 바뀌면 그 계정에 묶인 기기 구독을 모두 같은 조건으로 (KV 쓰기 = 바뀐 기기 수)
-// 값이 같은 기기는 쓰지 않고, 계정당 하루 KV 쓰기 40회까지 (넘으면 이번 동기화만 건너뜀 — 각 기기는 다음 알림 켜기 때 맞춰짐)
+// 값이 같은 기기는 쓰지 않고, 계정당 하루 KV 쓰기 40회·전체 150회까지 (넘으면 -1: 계정 조건 저장을 보류해 다음 PUT에서 재시도)
 async function applyAlert(env, sids, alert, uid) {
   const next = { filters: cleanFilters(alert.filters), label: str(alert.label, 80), query: str(alert.query, 300) };
   const todo = [];
@@ -132,7 +132,11 @@ async function applyAlert(env, sids, alert, uid) {
     if (JSON.stringify({ filters: v.filters, label: v.label, query: v.query }) !== JSON.stringify(next)) todo.push([sid, v]);
   }
   if (!todo.length) return 0;
-  if (uid && await limitAll(env, [{ k: 'al:' + uid, ms: 864e5, max: 40, cost: todo.length }]).catch(() => false)) return 0;
+  // 계정당 하루 40회 + 전체 하루 300회(KV 쓰기 하루 1,000 보호). D1 오류면 막음
+  // KV 쓰기 하루 1,000 예산 배분: 새 구독 400 + 조건 변경 200 + 계정 동기화 150 + seen 최대 204 = 954
+  const rules = [{ k: 'alg', ms: 864e5, max: 150, cost: todo.length }];
+  if (uid) rules.push({ k: 'al:' + uid, ms: 864e5, max: 40, cost: todo.length });
+  if (await limitAll(env, rules).catch(() => true)) return -1; // 거절(호출 쪽이 계정 조건 저장을 보류)
   for (const [sid, v] of todo) await env.SUBS.put(sid, JSON.stringify({ ...v, ...next, at: Date.now() }));
   return todo.length;
 }
@@ -197,6 +201,7 @@ const RR_MAX_POSTS = 60;    // 합친 라운드의 글 상한(오래된 글부�
 const KV_GET_BUDGET = 700;
 const SKIP_MAX = 1500;      // 이미 받은 구독 기록 상한(넘치면 오래된 기록부터 버림 → 중복 가능, 누락 없음)
 const SWEEP_SAMPLE = 300;
+const SENT_MAX = 600;       // rr.sent 상한(9시간 새 글 수보다 충분히 큼, 행 크기 약 15KB 이하)
 // 구독 키(해시)만 목록으로 — 값은 필요할 때만 get (KV 읽기 절약). 정렬해 라운드로빈 순서로 씀
 async function listSubKeys(env) {
   const out = []; let cursor;
@@ -230,7 +235,7 @@ async function freshPosts(env, now) {
   const fresh = first ? [] : live.filter(p => !seen.has(p.key) && now - Date.parse(p.posted) < FRESH_MS);
   const next = live.map(p => p.key).slice(0, 2000);
   const changed = next.length !== old.length || next.some(k => !seen.has(k)); // 순서만 바뀐 건 같은 것으로 봄
-  return { fresh, first, next, changed };
+  return { fresh, first, next, changed, old, liveKeys: new Set(live.map(p => p.key)) };
 }
 const compact = p => ({ key: p.key, posted: p.posted, board: p.board, region1: p.region1, region2: p.region2, slot: p.slot, amb: p.amb, date: p.date });
 const errMsg = e => String(e && e.message || e);
@@ -252,25 +257,45 @@ export async function runNotify(env, now = Date.now()) {
   if (!Array.isArray(rr.rounds)) rr.rounds = [];
   if (!Number.isInteger(rr.seq)) rr.seq = 0;
   if (!rr.skip || typeof rr.skip !== 'object' || Array.isArray(rr.skip)) rr.skip = {};
+  // rr.sent = { 글 키: 올라온 시각 } — 최근 9시간 안에 새 글 라운드로 보낸 글. seen 저장이 계속 실패해도(KV 한도·장애)
+  // 같은 글이 다시 '새 글'로 잡혀 새 라운드가 생기지 않게 함. 9시간 지난 기록은 버림, 최대 SENT_MAX개
+  if (!rr.sent || typeof rr.sent !== 'object' || Array.isArray(rr.sent)) rr.sent = {};
+  for (const [k, t] of Object.entries(rr.sent)) if (!(now - t < FRESH_MS)) delete rr.sent[k];
   rr.rounds = rr.rounds.filter(r => r && typeof r === 'object');
   rr.rounds.forEach(r => { delete r.skip; if (!Number.isInteger(r.id)) r.id = ++rr.seq; }); // 옛 형식 호환
   const rrBefore = JSON.stringify(rr);
-  let wantNew = !f.quiet && (f.fresh.length > 0 || rr.rounds.length > 0);
+  // 새 글 알림은 이번 data.json을 읽었을 때만(이어 보내는 라운드도 지금 살아 있는 글로 다시 거르므로 — 못 읽으면 다음 cron에)
+  f.fresh = f.fresh.filter(p => !(p.key in rr.sent)); // 이미 라운드로 보낸 글 제외 → 남는 게 없으면 seen 저장만 다시 시도
+  out.fresh = f.fresh.length;
+  let wantNew = !f.quiet && !!f.liveKeys && (f.fresh.length > 0 || rr.rounds.length > 0);
   let subs = null;
   if (wantNew) { try { subs = await listSubKeys(env); } catch (e) { err('list', e); wantNew = false; } } // 해시 목록(값은 아래에서 필요한 만큼만)
-  // 대상이 예산보다 많아 여러 cron에 나눠 보낼 때만, 겹친 cron이 같은 새 글을 두 번 보내지 않게 4분 lease (평소엔 D1 쓰기 0)
-  // cron은 5분 간격이라 평소 겹치지 않음. 겹쳐도 seen이 같은 값으로 저장되므로 새 글 중복은 1회 이내
+  // 새 글을 보낼 때는 항상 4분 lease — 겹친 cron이 같은 새 글을 두 번 보내지 않게 (D1 쓰기: 새 글 있는 cron마다 획득 1행 + 해제 1행)
   let lease = null;
-  if (wantNew && (subs.length > PUSH_BUDGET || rr.rounds.length)) {
-    lease = await acquireLease(env, now).catch(e => { err('lease', e); return 'open'; });
+  if (wantNew) {
+    lease = await acquireLease(env, Date.now()).catch(e => { err('lease', e); return 'open'; }); // 만료는 실제 시각 기준(늦게 시작한 cron도 겹침 방지)
     if (!lease) { wantNew = false; out.lease = 'busy'; }
   }
-  // seen 저장: 새 글이 있는데 이번에 처리 못 하면(lease·목록 실패) 저장하지 않음 → 다음 cron에 다시 새 글로 잡힘
-  let seenOK = true;
-  if (!f.quiet && f.changed && (wantNew || !f.fresh.length)) {
-    try { await env.SUBS.put('seen', JSON.stringify(f.next)); } catch (e) { err('seen put', e); seenOK = false; }
-  } else if (f.fresh.length && !wantNew) seenOK = false;
-  if (wantNew && seenOK && f.fresh.length) rr.rounds.push({ id: ++rr.seq, start: rr.g, wrapped: false, posts: f.fresh.slice(0, 30).map(compact) });
+  // seen 저장 (KV 쓰기는 cron당 많아야 1번):
+  //  - 새 글이 없으면(목록만 바뀜) 지금 저장
+  //  - 새 글이 있는데 이번에 처리 못 하면(lease·목록 실패) 저장하지 않음 → 다음 cron에 다시 새 글로 잡힘
+  //  - 새 글 라운드를 만들면 rr 저장이 성공한 뒤에 저장(아래 5) 직전). rr 저장이 실패하면 seen도 저장하지 않음 → 다음 cron에 다시
+  //    이미 라운드에 들어 있는 글은 새 라운드에 다시 넣지 않음(seen 저장 실패 뒤 같은 글이 또 새 글로 잡혀도 중복 없음)
+  let seenLater = false;
+  if (!f.quiet && f.changed && !f.fresh.length) {
+    try { await env.SUBS.put('seen', JSON.stringify(f.next)); } catch (e) { err('seen put', e); }
+  }
+  let addedRound = false, rrFailed = false;
+  if (wantNew && f.fresh.length) {
+    const inRound = new Set(rr.rounds.flatMap(r => Array.isArray(r.posts) ? r.posts.map(p => p.key) : []));
+    const posts = f.fresh.filter(p => !inRound.has(p.key)).slice(0, 30).map(compact);
+    if (posts.length) {
+      rr.rounds.push({ id: ++rr.seq, start: rr.g, wrapped: false, posts }); addedRound = true;
+      for (const p of posts) rr.sent[p.key] = Date.parse(p.posted) || now;
+      const ent = Object.entries(rr.sent); if (ent.length > SENT_MAX) rr.sent = Object.fromEntries(ent.sort((a, b) => b[1] - a[1]).slice(0, SENT_MAX));
+    }
+    seenLater = f.changed;
+  }
   const subCache = new Map(); // 이번 cron에서 읽은 구독 값 (h → 값 | null)
   let gets = 0;
   const getSub = async h => { gets++; const v = await env.SUBS.get('sub:' + h, 'json'); subCache.set(h, v); return v; };
@@ -289,14 +314,15 @@ export async function runNotify(env, now = Date.now()) {
     }
     const claimed = await claimDue(env, pick.map(x => x[0]), now);
     const got = new Set(claimed.map(r => r.sh));
-    out.remind = claimed.length;
+    out.remind = got.size; out.remindRows = claimed.length; // 리마인더 받을 구독 수 · 글 수
     for (const [h, rec] of pick) if (got.has(h)) targets.set(h, { sub: rec.sub, rem: true, isNew: false });
   } catch (e) { err('remind', e); }
   // 4) 새 글 — 남은 예산으로 라운드로빈
   let allRounds = null;
   if (wantNew && subs) {
     let budget = PUSH_BUDGET - targets.size;
-    const live = p => now - Date.parse(p.posted) < FRESH_MS; // 9시간 지난 글은 글 단위로 뺌
+    // 9시간 지난 글·마감됐거나 이번 data.json에 없는 글은 글 단위로 뺌 → 빈 라운드는 대상에서 제외(헛알림 방지)
+    const live = p => now - Date.parse(p.posted) < FRESH_MS && f.liveKeys.has(p.key);
     let rounds = rr.rounds.filter(r => Array.isArray(r.posts) && r.posts.some(live));
     rounds.forEach(r => { r.posts = r.posts.filter(live); });
     // 라운드가 너무 많으면 가장 오래된 라운드를 다음 라운드에 합침: 뒤 라운드의 남은 범위가 앞 라운드의 남은 범위를 포함하므로
@@ -343,13 +369,40 @@ export async function runNotify(env, now = Date.now()) {
   }
   // 커서·남은 글은 푸시 전에 저장 (중간에 멈춰도 이어서). D1 장애면 남은 대상은 이번 cron 것으로 끝
   if (!rr.rounds.length) { rr.g = ''; rr.skip = {}; rr.seq = 0; } // 다 보냈으면 커서 기록 불필요(다음 새 글은 처음부터) → 평소 D1 쓰기 0
-  if (rrLoaded && JSON.stringify(rr) !== rrBefore) { try { await saveRRStmt(env, rr).run(); } catch (e) { err('rr save', e); } }
+  let rrSaved = false;
+  if (rrLoaded && JSON.stringify(rr) !== rrBefore) {
+    try { await saveRRStmt(env, rr).run(); rrSaved = true; }
+    catch (e) {
+      // 커서·라운드를 못 남기면 이번 새 글 발송을 멈춤(리마인더만) — 남은 구독이 영영 못 받거나, 다음 cron에 같은 구독에 또 가는 것 방지
+      err('rr save', e);
+      for (const [h, t] of [...targets]) { if (t.rem) t.isNew = false; else targets.delete(h); }
+      out.deferred = 0;
+      rrFailed = true; // seen은 저장하지 않음 → 다음 cron에 같은 글을 새 글로 다시 잡음 (KV 되돌림 쓰기 없음)
+    }
+  }
+  if (seenLater && !rrFailed) {
+    try { await env.SUBS.put('seen', JSON.stringify(f.next)); }
+    catch (e) {
+      err('seen put', e);
+      // 라운드가 rr에 저장됐으면 그대로 보냄(다음 cron에 같은 글이 또 잡혀도 라운드에 있으니 다시 넣지 않음).
+      // rr 저장이 없었으면(한 cron에 다 보내는 경우) 이번 새 글 발송을 미룸 → 다음 cron에 한 번만
+      if (!rrSaved) for (const [h, t] of [...targets]) { if (t.rem) t.isNew = false; else targets.delete(h); }
+    }
+  }
   // 5) 발송
   const gone = []; // 404·410 → D1 정리가 성공한 뒤에 KV 삭제(실패하면 KV가 남아 다음 발송 때 다시 410 → 재시도)
   const okSent = [];
   if (targets.size) {
     let stop = false, rewound = false;
     for (const [h, t] of targets) {
+      let code;
+      if (!stop) {
+        try { code = await push(v, t.sub); }
+        catch (e) {
+          if (/too many subrequests/i.test(errMsg(e))) { stop = true; err('push', e); } // 이 대상부터 아래 되감기로
+          else code = 0; // 네트워크 예외·시간 초과
+        }
+      }
       if (stop) {
         if (t.rem) st.push(env.DB.prepare('UPDATE reminders SET sent_at = NULL WHERE sh = ? AND sent_at = ? AND dlv_at IS NULL').bind(h, now));
         // 못 보낸 첫 새 글 대상부터 다음 cron에 이어서 (커서·라운드를 그 시점으로 되돌림)
@@ -360,12 +413,6 @@ export async function runNotify(env, now = Date.now()) {
         }
         continue;
       }
-      let code;
-      try { code = await push(v, t.sub); }
-      catch (e) {
-        if (/too many subrequests/i.test(errMsg(e))) { stop = true; err('push', e); if (t.rem) st.push(env.DB.prepare('UPDATE reminders SET sent_at = NULL WHERE sh = ? AND sent_at = ? AND dlv_at IS NULL').bind(h, now)); continue; }
-        code = 0; // 네트워크 예외·시간 초과
-      }
       if (code >= 200 && code < 300) { out.sent++; okSent.push(h); continue; }
       if (code === 404 || code === 410) { gone.push(h); st.push(...dropStmts(env, h)); continue; }
       out.failed++; // 그 밖의 모든 실패(0·4xx·5xx): 지우지 않음. 리마인더는 한 번만 재시도
@@ -375,7 +422,7 @@ export async function runNotify(env, now = Date.now()) {
   // L-1: 이번에 푸시를 받은 구독은 지금 있는 새 글을 이미 기기에서 다 봤다 → 아직 그 구독까지 안 간 라운드에서 건너뜀
   // (라운드가 남아 있을 때만, 같은 meta 행을 한 번 더 쓰는 정도)
   //  기록은 rr 전체에 하나: { 구독 해시 앞 10자: 그때 가장 최근 라운드 id } (라운드마다 따로 두지 않아 행 크기가 구독 수에 비례)
-  if (rrLoaded && !stop2(st) && rr.rounds.length && okSent.length) {
+  if (rrLoaded && !rrFailed && !stop2(st) && rr.rounds.length && okSent.length) {
     const top = Math.max(...rr.rounds.map(r => r.id)), min = Math.min(...rr.rounds.map(r => r.id));
     for (const h of okSent) rr.skip[h.slice(0, 10)] = top;
     let ent = Object.entries(rr.skip).filter(([, v]) => v >= min); // 끝난 라운드 기록은 버림
@@ -461,15 +508,15 @@ export default {
         if (!old || JSON.stringify({ sub: old.sub, filters: old.filters, label: old.label, query: old.query }) !== JSON.stringify(rec)) {
           // KV 쓰기 한도(하루 1,000) 보호 — 규칙을 전부 통과할 때만 기록(거절은 D1 쓰기 0)
           //  접속지(IPv4 /32·IPv6 /64) 1시간 40회·하루 60회, IPv6 /48 1시간 60회
-          //  전체: 새 구독 하루 400회, 기존 구독 조건 변경 하루 300회(서로 따로 → 가짜 새 구독 폭주가 기존 사용자 변경을 막지 않음)
+          //  전체: 새 구독 하루 400회, 기존 구독 조건 변경 하루 200회(서로 따로 → 가짜 새 구독 폭주가 기존 사용자 변경을 막지 않음)
           //  seen(하루 ~100)·계정 동기화 몫을 남겨, KV 쓰기 소진으로 서비스 전체 알림이 멈추는 것을 막는 마지막 안전장치
           //  D1(횟수 기록)이 안 되면 KV를 보호할 수 없으므로 거절(닫힘) — 알림 켜기만 잠시 실패, 기존 알림 발송은 영향 없음
           const now = Date.now();
           const over = await (async () => {
             const ip = await ipKeys(req, env);
             const rules = [{ k: 's:' + ip.ih, ms: 3600e3, max: 40, cost: 1 }, { k: 'sd:' + ip.ih, ms: 864e5, max: 60, cost: 1 },
-              old ? { k: 'sgc', ms: 864e5, max: 300, cost: 1 } : { k: 'sg', ms: 864e5, max: 400, cost: 1 }];
-            if (ip.ih48) rules.push({ k: 's48:' + ip.ih48, ms: 3600e3, max: 60, cost: 1 });
+              old ? { k: 'sgc', ms: 864e5, max: 200, cost: 1 } : { k: 'sg', ms: 864e5, max: 400, cost: 1 }];
+            if (ip.ih48) rules.push({ k: 's48:' + ip.ih48, ms: 3600e3, max: 60, cost: 1 }, { k: 's48d:' + ip.ih48, ms: 864e5, max: 150, cost: 1 }); // /48 하루 150(전체 400을 혼자 못 채움)
             return limitAll(env, rules, now);
           })().catch(e => { console.log('subscribe limit', errMsg(e)); return 'down'; });
           if (over === 'down') return json(req, { error: 'try later' }, 503);
@@ -483,7 +530,8 @@ export default {
         const { endpoint } = (await req.json().catch(() => null)) || {};
         if (typeof endpoint === 'string' && endpoint.length <= 1024) {
           const h = await sha(endpoint);
-          if (await env.SUBS.get('sub:' + h)) await dropSub(env, h); // 등록된 구독일 때만 정리 (없는 주소는 읽기 1회로 끝)
+          // 등록된 구독일 때만 정리 (없는 주소는 읽기 1회로 끝). D1 정리 실패면 503 — KV도 그대로 두어 다시 시도할 수 있게
+          if (await env.SUBS.get('sub:' + h) && !(await dropSub(env, h))) return json(req, { error: 'try later' }, 503);
         }
         return json(req, { ok: true });
       }
