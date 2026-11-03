@@ -1,6 +1,6 @@
 // 앱 껍데기는 캐시 우선, 목록 데이터는 네트워크 우선 (오프라인이면 마지막 목록)
 // + 웹 푸시: 서버는 '새 글 있음' 신호만 보내고, 알림 내용은 여기서 목록을 읽어 만든다
-const CACHE = 'bdr-v10'; // 10-30 저장 글 리마인더·알림 클릭 → 공유 페이지
+const CACHE = 'bdr-v11'; // 11-03 캐시 키에서 쿼리 제거(data.json?t= 누적 정리 — 버전을 올려 옛 캐시 통째로 삭제)
 const PUSH_API = 'https://bdrguest-push.hoopguest.workers.dev';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-192.png', '/icon-maskable-512.png', '/ball.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
@@ -13,8 +13,10 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
   const networkFirst = u.pathname.endsWith('data.json') || e.request.mode === 'navigate';
   if (networkFirst) {
-    e.respondWith(fetch(e.request).then(r => { const c = r.clone(); caches.open(CACHE).then(x => x.put(e.request, c)); return r; })
-      .catch(() => caches.match(e.request).then(r => r || caches.match('/'))));
+    // 캐시 키는 쿼리를 뺀 경로(?t=… 마다 항목이 쌓이지 않게), 정상 응답(2xx)만 저장(503 등 오류 화면을 '/'에 남기지 않게)
+    const key = u.origin + u.pathname;
+    e.respondWith(fetch(e.request).then(r => { if (r.ok) { const c = r.clone(); caches.open(CACHE).then(x => x.put(key, c)).catch(() => {}); } return r; })
+      .catch(() => caches.match(key).then(r => r || caches.match('/'))));
   } else {
     e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
   }
