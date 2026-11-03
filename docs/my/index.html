@@ -560,7 +560,12 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   if (!NOGA && /^G-[A-Z0-9]{6,}$/.test(GA_ID) && GA_ID !== 'G-XXXXXXXXXX' && location.hostname === 'hoopguest.kro.kr') {
     const s = document.createElement('script'); s.async = true;
     s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID; document.head.appendChild(s);
-    gtag('js', new Date()); gtag('set', 'user_properties', { browser_ctx: HG_CTX }); gtag('config', GA_ID, { browser_ctx: HG_CTX });
+    // 인스타 유입 집계: 인스타 앱 안 브라우저이거나 instagram.com에서 넘어왔고 utm이 없으면 GA에만 출처 instagram 표시(주소창은 그대로)
+    var cfg = { browser_ctx: HG_CTX };
+    try { var igRef = /(^|\.)instagram\.com$/.test(document.referrer ? new URL(document.referrer).hostname : '');
+      if ((HG_INAPP === 'instagram' || igRef) && !/[?&]utm_source=/.test(location.search)) {
+        var pl = new URL(location.href); pl.searchParams.set('utm_source', 'instagram'); pl.searchParams.set('utm_medium', 'social'); cfg.page_location = pl.toString(); } } catch (e) {}
+    gtag('js', new Date()); gtag('set', 'user_properties', { browser_ctx: HG_CTX }); gtag('config', GA_ID, cfg);
   }
 </script>
 <link rel="alternate" type="application/rss+xml" title="훕게스트" href="https://hoopguest.kro.kr/rss.xml">
