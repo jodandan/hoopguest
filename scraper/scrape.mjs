@@ -20,10 +20,22 @@ const UA = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Geck
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// 네이버 카페 NSB 농심카페 '수도권 게스트' 게시판 (운영진 허락: 개인정보 비노출 조건)
-// 게스트·픽업·연습경기가 한 게시판에 섞여 있어 제목으로 분류. 작성자 정보는 저장하지 않음
-export const NAVER = { cafeId: 10586238, menuId: 34, pages: 5, name: '농심카페' };
-const NAVER_API = `https://apis.naver.com/cafe-web/cafe-boardlist-api/v1/cafes/${NAVER.cafeId}/menus/${NAVER.menuId}/articles`;
+// 네이버 카페 NSB 농심카페 (운영진 허락: 개인정보 비노출 조건). 작성자 정보는 저장하지 않음
+// - 수도권 게스트(34): 게스트·픽업·연습경기가 섞여 있어 제목으로 분류
+// - 전국 교류전해요(428): 전부 연습경기. 전국 게시판이라 수도권(서울·경기·인천)과 지역 표시 없는 글만 넣음
+export const NAVER = {
+  cafeId: 10586238, name: '농심카페',
+  menus: [
+    { menuId: 34, pages: 5, name: '수도권 게스트' },
+    { menuId: 428, pages: 2, name: '전국 교류전해요', board: 'match', metroOnly: true },
+  ],
+};
+const METRO = new Set(['서울', '경기', '인천']);
+const naverMenuOf = key => NAVER.menus.find(m => String(key).startsWith(`N${m.menuId}:`));
+// 농심카페 글의 게시판 분류 (고정 게시판이면 그 값, 아니면 제목으로)
+const naverBoard = (key, title) => naverMenuOf(key)?.board || classify(title);
+// 전국 게시판에서 지방 글은 뺀다
+export const outOfArea = p => !!(p.src === 'naver' && naverMenuOf(p.key)?.metroOnly && p.region1 && !METRO.has(p.region1));
 
 // 제목 속 연락처 가리기 (전화번호·카톡/오픈채팅 ID)
 export function maskTitle(t) {
@@ -45,12 +57,13 @@ export function classify(title) {
   return 'guest';
 }
 
-async function fetchNaver(now) {
+async function fetchNaver(menu, now) {
   const out = [];
-  for (let page = 1; page <= NAVER.pages; page++) {
+  const api = `https://apis.naver.com/cafe-web/cafe-boardlist-api/v1/cafes/${NAVER.cafeId}/menus/${menu.menuId}/articles`;
+  for (let page = 1; page <= menu.pages; page++) {
     const q = new URLSearchParams({ page, pageSize: 50, sortBy: 'TIME', viewType: 'L' });
-    const res = await fetch(`${NAVER_API}?${q}`, { headers: { 'User-Agent': UA, 'Accept': 'application/json', 'Referer': 'https://m.cafe.naver.com/' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status} (naver page ${page})`);
+    const res = await fetch(`${api}?${q}`, { headers: { 'User-Agent': UA, 'Accept': 'application/json', 'Referer': 'https://m.cafe.naver.com/' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status} (naver ${menu.menuId} page ${page})`);
     const json = await res.json();
     const list = (json.result?.articleList || []).filter(x => x.type === 'ARTICLE' && x.item && !x.item.blindArticle).map(x => x.item);
     if (!list.length) break;
@@ -58,8 +71,9 @@ async function fetchNaver(now) {
       const posted = new Date(a.writeDateTimestamp).toISOString();
       const title = maskTitle(String(a.subject || '').trim());
       const head = String(a.headName || '').replace(/모임$/, '');
+      const key = `N${menu.menuId}:${a.articleId}`;
       out.push({
-        key: `N${NAVER.menuId}:${a.articleId}`, id: a.articleId, src: 'naver', board: classify(title), title,
+        key, id: a.articleId, src: 'naver', board: naverBoard(key, title), title,
         url: `https://cafe.naver.com/cornrow/${a.articleId}`,
         posted, views: a.readCount ?? 0, head,
         ...parsePost(title, head, kstYmd(posted)),
@@ -144,23 +158,27 @@ async function main() {
     } else log.push(`${b.key}: ${got.length}건`);
     await sleep(DELAY_MS);
   }
-  try {
-    const got = await fetchNaver(now);
-    fresh.push(...got);
-    const pre = `N${NAVER.menuId}:`;
-    if (got.length >= 10) {
-      const ids = new Set(got.map(p => p.id)), minId = Math.min(...ids), before = kept.length;
-      kept = kept.filter(p => !(p.key.startsWith(pre) && p.id >= minId && !ids.has(p.id)));
-      log.push(`naver: ${got.length}건, 삭제 ${before - kept.length}`);
-    } else log.push(`naver: ${got.length}건`);
-  } catch (e) { log.push(`naver: 실패(${e.message}) — 기존 유지`); }
+  for (const menu of NAVER.menus) {
+    const tag = `naver${menu.menuId}`;
+    try {
+      const got = await fetchNaver(menu, now);
+      fresh.push(...got);
+      const pre = `N${menu.menuId}:`;
+      if (got.length >= 10) {
+        const ids = new Set(got.map(p => p.id)), minId = Math.min(...ids), before = kept.length;
+        kept = kept.filter(p => !(p.key.startsWith(pre) && p.id >= minId && !ids.has(p.id)));
+        log.push(`${tag}: ${got.length}건, 삭제 ${before - kept.length}`);
+      } else log.push(`${tag}: ${got.length}건`);
+    } catch (e) { log.push(`${tag}: 실패(${e.message}) — 기존 유지`); }
+    await sleep(DELAY_MS);
+  }
   if (!fresh.length) throw new Error('수집 0건 — 기존 data.json 유지');
 
   // 병합: 새로 받은 글 우선, 이전 글은 게시시각 유지
   // 이전 글도 매번 최신 분석 규칙으로 다시 분석 (분석기 개선이 기존 글에도 반영되도록)
   kept = kept.map(p => {
     p = { ...p, title: maskTitle(p.title) };
-    if (p.src === 'naver') p.board = classify(p.title);
+    if (p.src === 'naver') p.board = naverBoard(p.key, p.title);
     const n = parsePost(p.title, p.head || '', kstYmd(p.posted));
     if (p.head === undefined && !n.region1) { n.region1 = p.region1; n.region2 = p.region2; } // 말머리 저장 전 글은 기존 지역 유지
     return { ...p, ...n };
@@ -179,7 +197,7 @@ async function main() {
 
   // 같은 게시판에서 같은 제목 재게시는 최신 1건만
   const seen = new Set();
-  const dedup = posts.filter(p => !NON_RECRUIT.test(p.title)).filter(p => {
+  const dedup = posts.filter(p => !NON_RECRUIT.test(p.title) && !outOfArea(p)).filter(p => {
     const k = p.board + p.title.replace(/\s+/g, '');
     if (seen.has(k)) return false;
     seen.add(k); return true;
@@ -195,7 +213,7 @@ async function main() {
   const out = {
     updated: new Date(now).toISOString(), today,
     boards: BOARDS.map(({ fld, key, name }) => ({ fld, key, name, url: `https://m.cafe.daum.net/dongarry/${fld}` })),
-    sources: [{ key: 'daum', name: 'BDR 동아리농구방', url: 'https://m.cafe.daum.net/dongarry' }, { key: 'naver', name: NAVER.name, url: `https://m.cafe.naver.com/ca-fe/web/cafes/${NAVER.cafeId}/menus/${NAVER.menuId}` }],
+    sources: [{ key: 'daum', name: 'BDR 동아리농구방', url: 'https://m.cafe.daum.net/dongarry' }, ...NAVER.menus.map(m => ({ key: `naver${m.menuId === 34 ? '' : m.menuId}`, name: m.menuId === 34 ? NAVER.name : `${NAVER.name} ${m.name}`, url: `https://m.cafe.naver.com/ca-fe/web/cafes/${NAVER.cafeId}/menus/${m.menuId}` }))],
     added, posts: dedup,
   };
   await writeFile(OUT, JSON.stringify(out));
