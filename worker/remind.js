@@ -89,7 +89,8 @@ export async function replaceReminders(env, sh, items, ip, now = Date.now()) {
   const day = [{ k: 'rg', ms: 864e5, max: REMIND_D1_DAY }];
   if (ip) day.push({ k: 'rgi:' + ip.ih, ms: 864e5, max: REMIND_D1_DAY_IP });
   if (ip && ip.ih48) day.push({ k: 'rg48:' + ip.ih48, ms: 864e5, max: REMIND_D1_DAY_IP });
-  const d1rows = rows * 3 + rules.length + day.length;
+  // D1 실제 쓴 행: 리마인더 1건 3행(표·기본키·부분 인덱스) + 횟수 기록 1개 2행(표·기본키 인덱스)
+  const d1rows = rows * 3 + 2 * (rules.length + day.length);
   for (const d of day) rules.push({ ...d, cost: d1rows });
   if (await limitAll(env, rules, now)) return { error: 'too many', status: 429 };
   const st = [];

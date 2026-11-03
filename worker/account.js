@@ -143,7 +143,12 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     if (n && n.n >= 5) return json(req, { error: 'too many', code: 'rate' }, 429);
     const rules = [{ k: 'cg', ms: 864e5, max: 200, cost: 1 }];
     if (ip.ih48) rules.push({ k: 'c48:' + ip.ih48, ms: 3600e3, max: 20, cost: 1 });
-    if (await limitAll(env, rules, now)) return json(req, { error: 'too many', code: 'rate' }, 429);
+    if (await limitAll(env, rules, now)) {
+      // 전체 하루 상한이 찼으면 'full'(누구도 못 보냄), 아니면 이 접속지 제한 'rate'
+      const g = await env.DB.prepare("SELECT win, n FROM rl WHERE k = 'cg'").first().catch(() => null);
+      const full = g && g.win === Math.floor(now / 864e5) && g.n >= 200;
+      return json(req, { error: 'too many', code: full ? 'full' : 'rate' }, 429);
+    }
     await env.DB.batch([
       env.DB.prepare('INSERT INTO contacts (kind, body, reply, page, ih, created) VALUES (?, ?, ?, ?, ?, ?)').bind(kind, body, reply, page, ih, now),
       env.DB.prepare('DELETE FROM contacts WHERE (done > 0 AND done < ?) OR created < ?').bind(now - CONTACT_DONE_MS, now - CONTACT_MAX_MS), // 처리하고 6개월, 처리 안 했어도 1년 지난 문의 삭제
@@ -156,14 +161,17 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     const state = rand(18), ret = safeReturn(url.searchParams.get('return') || ''), now = Date.now();
     const n = /^[A-Za-z0-9_-]{16,64}$/.test(url.searchParams.get('n') || '') ? url.searchParams.get('n') : '';
     // 로그인 시작 횟수: 접속지(/64) 시간당 30·하루 100, IPv6 /48 시간당 100·하루 300 (D1 쓰기 보호)
-    const ip = await ipKeys(req, env);
+    let ip; try { ip = await ipKeys(req, env); } catch (e) { return back(ret, 'login_error=server'); }
     const lr = [{ k: 'ka:' + ip.ih, ms: 3600e3, max: 30, cost: 1 }, { k: 'kad:' + ip.ih, ms: 864e5, max: 100, cost: 1 }];
     if (ip.ih48) lr.push({ k: 'ka48:' + ip.ih48, ms: 3600e3, max: 100, cost: 1 }, { k: 'ka48d:' + ip.ih48, ms: 864e5, max: 300, cost: 1 });
-    if (await limitAll(env, lr, now)) return back(ret, 'login_error=rate');
-    await env.DB.batch([
-      env.DB.prepare('DELETE FROM logins WHERE created < ?').bind(now - STATE_MS), // 끝나지 않은 로그인 시작 기록은 10분 뒤 정리
-      env.DB.prepare('INSERT INTO logins (state, ret, mode, n, created) VALUES (?, ?, ?, ?, ?)').bind(state, ret, mode, n, now),
-    ]);
+    // D1 오류면 500 JSON 대신 사이트로 돌려보냄(#login_error=server) — 사용자가 빈 오류 화면에 남지 않게
+    try {
+      if (await limitAll(env, lr, now)) return back(ret, 'login_error=rate');
+      await env.DB.batch([
+        env.DB.prepare('DELETE FROM logins WHERE created < ?').bind(now - STATE_MS), // 끝나지 않은 로그인 시작 기록은 10분 뒤 정리
+        env.DB.prepare('INSERT INTO logins (state, ret, mode, n, created) VALUES (?, ?, ?, ?, ?)').bind(state, ret, mode, n, now),
+      ]);
+    } catch (e) { console.log('auth start d1', String(e && e.message || e)); return back(ret, 'login_error=server'); }
     const q = new URLSearchParams({ response_type: 'code', client_id: env.KAKAO_REST_KEY, redirect_uri: url.origin + '/auth/kakao/callback', state });
     return new Response(null, { status: 302, headers: { Location: 'https://kauth.kakao.com/oauth/authorize?' + q, 'Cache-Control': 'no-store' } });
   }
@@ -234,17 +242,19 @@ export async function handleAccount(req, env, url, json, hooks = {}) {
     let body; try { body = JSON.parse(text); } catch { return json(req, { error: 'bad request' }, 400); }
     if (!body || typeof body !== 'object' || !body.data || typeof body.data !== 'object' || Array.isArray(body.data)) return json(req, { error: 'bad request' }, 400);
     const now = Date.now();
-    // 계정당 분당 20회·시간당 300회 (D1 쓰기 보호 — 기기 동기화는 변경 때만 보내므로 정상 사용은 훨씬 적음)
-    if (await limitAll(env, [{ k: 'mp:' + u.uid, ms: 60e3, max: 20, cost: 1 }, { k: 'mph:' + u.uid, ms: 3600e3, max: 300, cost: 1 }], now)) return json(req, { error: 'too many', code: 'rate' }, 429);
+    // 계정당 12분 창 60회 = 분당 최대 60·정시 기준 시간당 최대 300 — 기록 행 하나(쓰기 1행)로 두 한도를 함께 묶음
+    if (await limitAll(env, [{ k: 'mp:' + u.uid, ms: 720e3, max: 60, cost: 1 }], now)) return json(req, { error: 'too many', code: 'rate' }, 429);
     const old = await env.DB.prepare('SELECT data FROM users WHERE uid = ?').bind(u.uid).first();
-    await env.DB.prepare('UPDATE users SET data = ?, updated = ? WHERE uid = ?').bind(JSON.stringify(body.data), now, u.uid).run();
-    let synced = 0;
-    const alert = body.data.alert, oldAlert = old ? (JSON.parse(old.data || '{}').alert || null) : null;
+    let synced = 0, pending = false;
+    const data = body.data, alert = data.alert, oldAlert = old ? (JSON.parse(old.data || '{}').alert || null) : null;
     if (hooks.onAlert && alert && typeof alert === 'object' && alert.filters && JSON.stringify(alert) !== JSON.stringify(oldAlert)) {
       const { results } = await env.DB.prepare('SELECT sid FROM devices WHERE uid = ?').bind(u.uid).all();
       synced = await hooks.onAlert((results || []).map(r => r.sid), alert, u.uid);
+      // 기기 동기화가 한도로 거절되면 계정의 알림 조건은 예전 값으로 둠 → 다음 PUT에서 '바뀜'으로 다시 잡혀 재시도(조건이 영영 어긋나지 않게)
+      if (synced < 0) { pending = true; synced = 0; if (oldAlert) data.alert = oldAlert; else delete data.alert; }
     }
-    return json(req, { ok: true, updated: now, synced });
+    await env.DB.prepare('UPDATE users SET data = ?, updated = ? WHERE uid = ?').bind(JSON.stringify(data), now, u.uid).run();
+    return json(req, pending ? { ok: true, updated: now, synced, alertPending: true } : { ok: true, updated: now, synced });
   }
   if (p === '/logout' && req.method === 'POST') {
     await env.DB.batch([env.DB.prepare('DELETE FROM sessions WHERE th = ?').bind(u.th), env.DB.prepare('DELETE FROM devices WHERE th = ?').bind(u.th)]);
