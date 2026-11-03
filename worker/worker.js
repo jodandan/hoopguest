@@ -195,7 +195,18 @@ async function dropSub(env, h) {
 //     (리마인더만 다음 cron에 한 번 재시도). 서버 쪽 공통 원인(키·설정)으로 전원이 403을 받아도 구독이 사라지지 않게
 //  한 cron에서 구독 값(KV get)은 700개까지만 읽음(내부 요청 1,000 한도) — 넘으면 커서를 남기고 다음 cron
 const PUSH_BUDGET = 40;
-const FRESH_MS = 9 * 3600e3;     // 서비스워커가 새 글로 보는 기간과 같음
+const FRESH_MS = 9 * 3600e3;     // 서비스워커가 새 글로 보는 기간과 같음(조용한 시간 제외한 경과 시간 기준)
+// 조용한 시간(KST 0~7시, 알림을 보내지 않는 시간)을 뺀 경과 시간(ms) — 서버(worker.js)와 서비스워커(sw.js)에 같은 코드
+// 밤 9~11시 글도 아침 7시에 이어 보낼 때 '9시간 지난 글'로 빠지지 않게. 3일 넘게 지난 글은 그냥 경과 시간(어차피 오래됨)
+export const awakeMs = (from, to) => {
+  const d = to - from;
+  if (!(d > 0) || d > 3 * 864e5) return d;
+  const K = 9 * 3600e3, D = 864e5, Q = 7 * 3600e3;
+  let q = 0;
+  for (let s = Math.floor((from + K) / D) * D - K; s < to; s += D) q += Math.max(0, Math.min(to, s + Q) - Math.max(from, s));
+  return d - q;
+};
+
 const RR_MAX_ROUNDS = 20;   // 넘으면 가장 오래된 두 라운드를 합침(누락 없음, 일부 구독 조용한 중복 가능)
 const RR_MAX_POSTS = 60;    // 합친 라운드의 글 상한(오래된 글부터 뺌)
 const KV_GET_BUDGET = 700;
@@ -232,7 +243,7 @@ async function freshPosts(env, now) {
   const old = (await env.SUBS.get('seen', 'json')) || [];
   const seen = new Set(old);
   const first = seen.size === 0;
-  const fresh = first ? [] : live.filter(p => !seen.has(p.key) && now - Date.parse(p.posted) < FRESH_MS);
+  const fresh = first ? [] : live.filter(p => !seen.has(p.key) && awakeMs(Date.parse(p.posted), now) < FRESH_MS);
   const next = live.map(p => p.key).slice(0, 2000);
   const changed = next.length !== old.length || next.some(k => !seen.has(k)); // 순서만 바뀐 건 같은 것으로 봄
   return { fresh, first, next, changed, old, liveKeys: new Set(live.map(p => p.key)) };
@@ -260,7 +271,7 @@ export async function runNotify(env, now = Date.now()) {
   // rr.sent = { 글 키: 올라온 시각 } — 최근 9시간 안에 새 글 라운드로 보낸 글. seen 저장이 계속 실패해도(KV 한도·장애)
   // 같은 글이 다시 '새 글'로 잡혀 새 라운드가 생기지 않게 함. 9시간 지난 기록은 버림, 최대 SENT_MAX개
   if (!rr.sent || typeof rr.sent !== 'object' || Array.isArray(rr.sent)) rr.sent = {};
-  for (const [k, t] of Object.entries(rr.sent)) if (!(now - t < FRESH_MS)) delete rr.sent[k];
+  for (const [k, t] of Object.entries(rr.sent)) if (!(awakeMs(t, now) < FRESH_MS)) delete rr.sent[k];
   rr.rounds = rr.rounds.filter(r => r && typeof r === 'object');
   rr.rounds.forEach(r => { delete r.skip; if (!Number.isInteger(r.id)) r.id = ++rr.seq; }); // 옛 형식 호환
   const rrBefore = JSON.stringify(rr);
@@ -322,7 +333,7 @@ export async function runNotify(env, now = Date.now()) {
   if (wantNew && subs) {
     let budget = PUSH_BUDGET - targets.size;
     // 9시간 지난 글·마감됐거나 이번 data.json에 없는 글은 글 단위로 뺌 → 빈 라운드는 대상에서 제외(헛알림 방지)
-    const live = p => now - Date.parse(p.posted) < FRESH_MS && f.liveKeys.has(p.key);
+    const live = p => awakeMs(Date.parse(p.posted), now) < FRESH_MS && f.liveKeys.has(p.key);
     let rounds = rr.rounds.filter(r => Array.isArray(r.posts) && r.posts.some(live));
     rounds.forEach(r => { r.posts = r.posts.filter(live); });
     // 라운드가 너무 많으면 가장 오래된 라운드를 다음 라운드에 합침: 뒤 라운드의 남은 범위가 앞 라운드의 남은 범위를 포함하므로
