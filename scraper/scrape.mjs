@@ -22,7 +22,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // 네이버 카페 NSB 농심카페 (운영진 허락: 개인정보 비노출 조건). 작성자 정보는 저장하지 않음
 // - 수도권 게스트(34): 게스트·픽업·연습경기가 섞여 있어 제목으로 분류
-// - 전국 교류전해요(428): 전부 연습경기. 전국 게시판이라 수도권(서울·경기·인천)과 지역 표시 없는 글만 넣음
+// - 전국 교류전해요(428): 전부 연습경기. 전국 게시판이라 수도권(서울·경기·인천) 글만 넣음(지역 표시 없는 글도 뺌)
 export const NAVER = {
   cafeId: 10586238, name: '농심카페',
   menus: [
@@ -34,8 +34,8 @@ const METRO = new Set(['서울', '경기', '인천']);
 const naverMenuOf = key => NAVER.menus.find(m => String(key).startsWith(`N${m.menuId}:`));
 // 농심카페 글의 게시판 분류 (고정 게시판이면 그 값, 아니면 제목으로)
 const naverBoard = (key, title) => naverMenuOf(key)?.board || classify(title);
-// 전국 게시판에서 지방 글은 뺀다
-export const outOfArea = p => !!(p.src === 'naver' && naverMenuOf(p.key)?.metroOnly && p.region1 && !METRO.has(p.region1));
+// 전국 게시판에서 수도권이 아닌 글(지역 표시 없는 글 포함)은 뺀다
+export const outOfArea = p => !!(p.src === 'naver' && naverMenuOf(p.key)?.metroOnly && !METRO.has(p.region1));
 
 // 제목 속 연락처 가리기 (전화번호·카톡/오픈채팅 ID)
 export function maskTitle(t) {
