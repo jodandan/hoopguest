@@ -1,6 +1,6 @@
 // 앱 껍데기는 캐시 우선, 목록 데이터는 네트워크 우선 (오프라인이면 마지막 목록)
 // + 웹 푸시: 서버는 '새 글 있음' 신호만 보내고, 알림 내용은 여기서 목록을 읽어 만든다
-const CACHE = 'bdr-v11'; // 11-03 캐시 키에서 쿼리 제거(data.json?t= 누적 정리 — 버전을 올려 옛 캐시 통째로 삭제)
+const CACHE = 'bdr-v12'; // 11-03 새 글 9시간 판정에서 조용한 시간(KST 0~7시) 제외
 const PUSH_API = 'https://bdrguest-push.hoopguest.workers.dev';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-192.png', '/icon-maskable-512.png', '/ball.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
@@ -22,6 +22,16 @@ self.addEventListener('fetch', e => {
   }
 });
 
+// 조용한 시간(KST 0~7시, 알림을 보내지 않는 시간)을 뺀 경과 시간(ms) — 서버(worker.js)와 서비스워커(sw.js)에 같은 코드
+// 밤 9~11시 글도 아침 7시에 이어 보낼 때 '9시간 지난 글'로 빠지지 않게. 3일 넘게 지난 글은 그냥 경과 시간(어차피 오래됨)
+const awakeMs = (from, to) => {
+  const d = to - from;
+  if (!(d > 0) || d > 3 * 864e5) return d;
+  const K = 9 * 3600e3, D = 864e5, Q = 7 * 3600e3;
+  let q = 0;
+  for (let s = Math.floor((from + K) / D) * D - K; s < to; s += D) q += Math.max(0, Math.min(to, s + Q) - Math.max(from, s));
+  return d - q;
+};
 const STATE = '/__push-state';
 // 저장소 오류(용량 초과·손상)가 나도 알림은 반드시 띄워야 하므로 실패는 빈 상태로 처리
 async function getState() { try { const c = await caches.open('bdr-state'); const r = await c.match(STATE); const v = r ? await r.json() : {}; return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
@@ -84,7 +94,7 @@ async function handlePush() {
     const d = await (await fetch('/data.json?t=' + Date.now(), { cache: 'no-store' })).json();
     const now = Date.now(), today = new Date(now + 9 * 3600e3).toISOString().slice(0, 10);
     hits = (d.posts || []).filter(p => p.key && !notified.has(p.key) && (!p.date || p.date >= today)
-      && now - Date.parse(p.posted) < 9 * 3600e3 && matches(f, p));
+      && awakeMs(Date.parse(p.posted), now) < 9 * 3600e3 && matches(f, p));
   } catch {}
   hits.forEach(p => notified.add(p.key));
   const arr = x => Array.isArray(x) ? x.filter(y => y && y.key && y.date && y.start) : [];
