@@ -9,6 +9,7 @@ docs/index.html(본 사이트)을 그대로 복사하고 새 디자인만 덧씌
 """
 import pathlib, sys
 
+LIVE = '--live' in sys.argv  # --live: 본 사이트(docs/index.html)에 직접 적용 (11-03 본 적용)
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 src = (ROOT / 'docs/index.html').read_text(encoding='utf-8')
 out = src
@@ -21,8 +22,10 @@ def rep(old, new, count=1):
     out = out.replace(old, new, count)
 
 
-# 1) 비노출 + 대표 주소는 본 사이트
-rep('<link rel="canonical" href="https://hoopguest.kro.kr/">',
+if 'id="homePanel"' in src:
+    sys.exit('이미 새 디자인이 들어간 파일이에요 — 다시 적용하지 않아요')
+# 1) 비노출 + 대표 주소는 본 사이트 (본 적용 땐 건너뜀)
+if not LIVE: rep('<link rel="canonical" href="https://hoopguest.kro.kr/">',
     '<link rel="canonical" href="https://hoopguest.kro.kr/">\n<meta name="robots" content="noindex,nofollow">')
 
 # 2) 글꼴
@@ -148,7 +151,7 @@ JS = r'''  // ---- 11-02 미리보기: 같은 날 같은 시각이 이어지면 
 '''
 rep('  function render() {\n', JS)
 
-dst = ROOT / 'docs/new/index.html'
+dst = ROOT / ('docs/index.html' if LIVE else 'docs/new/index.html')
 dst.parent.mkdir(exist_ok=True)
 dst.write_text(out, encoding='utf-8')
 print('ok', dst, len(out))

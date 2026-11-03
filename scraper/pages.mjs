@@ -45,7 +45,7 @@ function dedupe(rows) {
   return rows.filter(p => !drop.has(p.key));
 }
 // 10-27 코트 테마 — 첫 화면(docs/index.html '코트 테마')과 같은 모양: 마루 바닥·하프코트 머리·LED 전광판 시각 칸·붓글씨 제목
-const FONT_LINKS = ['https://fonts.googleapis.com/css2?family=East+Sea+Dokdo&display=swap', 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css', 'https://fonts.googleapis.com/css2?family=DotGothic16&display=swap&text=0123456789%3A~-'].map(h => `<link rel="stylesheet" href="${h}" media="print" onload="this.media='all'">`).join('');
+const FONT_LINKS = ['https://fonts.googleapis.com/css2?family=East+Sea+Dokdo&display=swap', 'https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Oswald:wght@600;700&display=swap', 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css', 'https://fonts.googleapis.com/css2?family=DotGothic16&display=swap&text=0123456789%3A~-'].map(h => `<link rel="stylesheet" href="${h}" media="print" onload="this.media='all'">`).join('');
 const THEME_CSS = `
 :root{--f-display:"East Sea Dokdo","Pretendard Variable",Pretendard,sans-serif;--f-body:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;--f-led:"DotGothic16",var(--f-body);
   --bg:#E9D4B0;--line:#DCC7A3;--card-line:#EFEAE2;--wood-seam:rgba(105,62,15,.13);--wood-grain:rgba(120,75,25,.05);--wood-grain2:rgba(255,255,255,.07);
@@ -71,6 +71,26 @@ li .t em{font:700 11px/1.2 var(--f-body);font-style:normal;color:#FF9B8F;text-sh
 :root[data-theme="dark"] li .t{color:var(--led)}
 @media (max-width:359px){li{padding-left:76px}li .t{width:64px;font-size:17px}}
 .c .when{font:400 30px/1.2 var(--f-display);letter-spacing:0}
+
+/* 11-03 첫 화면 새 디자인(맨체스터 시안)과 통일 — 농구장 색: 검정 코트·백보드 빨강·호박색 시각, 각진 모양 */
+:root{--bg:#F4EFE6;--text:#17181A;--sub:#5E5A53;--line:#E2DBCF;--card:#fff;--card-line:#E2DBCF;--hero:transparent;--hero-text:#17181A;--pill:#ECE6DB;--btn:#CF3326;--btn-text:#fff;--accent:#B4231A;--time:#A0520A;--cs:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121212;--text:#F2EEE6;--sub:#C9C3B8;--line:#2E2E2E;--card:#1C1C1C;--card-line:#2E2E2E;--hero-text:#F2EEE6;--pill:#2A2A2A;--btn:#CF3326;--btn-text:#fff;--accent:#FFB547;--time:#FFB547}}
+:root[data-theme="dark"]{--bg:#121212;--text:#F2EEE6;--sub:#C9C3B8;--line:#2E2E2E;--card:#1C1C1C;--card-line:#2E2E2E;--hero-text:#F2EEE6;--pill:#2A2A2A;--btn:#CF3326;--btn-text:#fff;--accent:#FFB547;--time:#FFB547}
+body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transparent) 1px,transparent 1.6px);background-size:6px 6px}
+.hdr{background:transparent!important;background-image:none!important;color:var(--text)!important}
+.hdr .brand b{font:400 30px/1 var(--f-display)!important}
+.hdr .brand i{background:#CF3326!important;color:#fff!important}
+h2{font:400 22px/1.2 "Black Han Sans",var(--f-body);box-shadow:none}
+.trend h2,.links h2{font:700 16px/1.4 var(--f-body)}
+li,.c,.trend,.empty,.cta,.b,.where,.nv a,.x,.notice{border-radius:0!important}
+li{background:var(--card);border:1px solid var(--card-line)!important;padding:10px 12px 10px 104px}
+li .t,li .t.off{left:0;top:12px;bottom:12px;width:92px;align-items:flex-start;padding:0 8px 0 14px;white-space:nowrap;background:none;box-shadow:none;border-radius:0;border-right:2px solid color-mix(in srgb,var(--text) 38%,transparent);font:700 24px/1 "Oswald",var(--f-body);color:var(--time)!important;text-shadow:none}
+li .t b{font-weight:700}
+li .t i,li .t.off i{font:700 12px/1.3 var(--f-body);color:var(--sub);text-shadow:none;margin-top:5px}
+li .t.off b{color:var(--sub);opacity:1}
+li .t em{color:var(--accent)}
+.cta{background:#CF3326!important;color:#fff!important}
+@media (max-width:359px){li{padding-left:92px}li .t,li .t.off{width:82px;padding-left:10px;font-size:20px}li .t i{font-size:11px}}
 `;
 // 첫 화면 docs/index.html의 cleanTitle과 같은 정규식. 단 지역 페이지 카드엔 지역 꼬리표가 없어서 앞머리 [지역]은 남기고 날짜·시간만 뗌. 정규식을 고치면 둘 다 고칠 것
 const BR=/^\s*(?:[\[(【][^\]\)】]{1,24}[\]\)】]|[\[(【][^\]\)】]{1,24}(?=\s*[\[(【]))\s*[·,/\-~]?\s*/;
@@ -110,7 +130,7 @@ function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, lin
   const url = `${SITE}${path}`;
   const groups = new Map();
   for (const p of posts) { const k = p.date || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); }
-  const list = posts.length ? [...groups].map(([d, ps]) => `<h2>${esc(dayLabel(d, today)).replace(/(\d{1,2}\/\d{1,2})/, '<i class="dn">$1</i>')} <small>${ps.length}건</small></h2><ul>${ps.map(p => `<li>${p.start ? `<span class="t"><b>${esc(p.start)}</b><i>${p.end ? '~' + esc(p.end) : ''}</i>${p.amb ? '<em title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전·저녁?</em>' : ''}</span>` : `<span class="t off"><b>--:--</b><i>${esc(p.slot ? p.slot + ' 미정' : '시간 미정')}</i></span>`}<a href="${esc(p.url)}" rel="nofollow noopener" target="_blank" title="${esc(unent(p.title))}">${esc(cleanTitle(p))}</a><span class="m">${home && p.region2 !== home ? `<b class="near">근처 ${esc(where(p))}</b> · ` : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방'}</b> · ${BOARD_NAME[p.board] || '게스트'}</span></li>`).join('')}</ul>`).join('')
+  const list = posts.length ? [...groups].map(([d, ps]) => `<h2>${esc(dayLabel(d, today)).replace(/(\d{1,2}\/\d{1,2})/, '<i class="dn">$1</i>')} <small>${ps.length}건</small></h2><ul>${ps.map(p => `<li>${p.start ? `<span class="t"><b>${esc(p.start)}</b><i>${p.end ? esc(p.end) + '까지' : ''}</i>${p.amb ? '<em title="제목에 오전·오후 표시가 없어요. 원문을 확인하세요">오전·저녁?</em>' : ''}</span>` : `<span class="t off"><b>--:--</b><i>${esc(p.slot ? p.slot + ' 미정' : '시간 미정')}</i></span>`}<a href="${esc(p.url)}" rel="nofollow noopener" target="_blank" title="${esc(unent(p.title))}">${esc(cleanTitle(p))}</a><span class="m">${home && p.region2 !== home ? `<b class="near">근처 ${esc(where(p))}</b> · ` : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방'}</b> · ${BOARD_NAME[p.board] || '게스트'}</span></li>`).join('')}</ul>`).join('')
     : empty || '<p class="empty">지금은 모집 글이 없어요. 가까운 지역이나 전체 목록을 확인해 보세요.</p>';
   const ld = [{ '@context': 'https://schema.org', '@type': 'WebSite', name: '훕게스트', alternateName: ['hoopguest', '농구 게스트 모아보기'], url: SITE + '/' },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.map(([n, u], i) => ({ '@type': 'ListItem', position: i + 1, name: n, item: SITE + u })) },
