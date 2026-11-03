@@ -440,7 +440,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 /* ===== 11-02 맨체스터 시안 (미리보기 /new/) — 농구장 색: 코트 고무 바닥(검정)·마루(나무)·백보드 빨강·전광판 호박색 ===== */
 :root{--bg:#F4EFE6;--card:#FFFFFF;--text:#17181A;--sub:#5E5A53;--muted:#6E685F;--line:#E2DBCF;--line2:#C9C1B3;--card-line:#E2DBCF;--card-shadow:none;
   --accent:#B4231A;--accent-strong:#CF3326;--on-accent:#fff;--hero:transparent;--hero-text:#17181A;--hero-sub:#5E5A53;--ink:#17181A;--on-ink:#fff;
-  --chip:#fff;--chip-on:#17181A;--chip-on-text:#fff;--pill:#ECE6DB;--pill-text:#17181A;--star:#B07D00;--track:transparent;--seg-on:#17181A;
+  --chip:#fff;--chip-on:#17181A;--chip-on-text:#fff;--pill:#ECE6DB;--pill-text:#17181A;--star:#946A00;--track:transparent;--seg-on:#17181A;
   --btn-soft:#F3EEE6;--btn-soft2:#F3EEE6;--time:#A0520A;--soon:#B4231A;--tab-dim:#17181A;--hl:#FFE7A3;--hl-text:#3D2F00;
   --f-num:"Oswald",var(--f-body);--f-blk:"Black Han Sans",var(--f-body)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121212;--card:#1C1C1C;--text:#F2EEE6;--sub:#C9C3B8;--muted:#A9A39A;--line:#2E2E2E;--line2:#4A4A4A;--card-line:#2E2E2E;
@@ -513,6 +513,8 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
 .card.closed .title{color:var(--muted)}
 .card.closed .time .s{color:var(--muted);text-decoration:line-through}
 .star{align-self:flex-start;margin:6px 4px 0 0}
+/* 대비·누르는 곳 보강(11-03): 읽음·진행 중 카드 시각은 .85까지만 흐리게(작은 글자 4.5:1), 검색칸 안내 글자 muted, 넓은 화면 가이드 링크는 보이는 크기 그대로 위아래 터치 영역 32px */
+.card.seen .time,.card.live .time{opacity:.85}#q::placeholder{color:var(--muted);opacity:1}@media (min-width:640px) and (min-height:501px){.hero .guidelnk{padding:9px 0}}
 .card .cacts>.nav,.card .cacts>.nav:hover{background:var(--accent-strong)!important;color:#fff!important}
 .tabs .tab,.tabs .tab.few{flex:1 1 0;min-width:0;white-space:nowrap}
 @media (max-width:359px){.tabs .tab{font-size:13px;padding:0 4px}.tab .n{margin-left:2px}}
@@ -1875,22 +1877,38 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   const authTok = () => store.get(AUTH_KEY, null);
   const localData = () => Object.fromEntries(SYNC_KEYS.map(k => [k.slice(4), store.get(k, null)]));
   const storeSet0 = store.set;
-  // syncDirty: 아직 계정에 못 올린 변경 { at, keys:[바뀐 설정 이름], add:[저장], del:[해제] } — 새로고침·탭 닫기 뒤에도 남음
+  // syncDirty: 아직 계정에 못 올린 변경 — 항목마다 바꾼 시각을 둠 { at, keys:{이름:[시각, 바꾸기 전 값]}, add:{글:시각}, del:{글:시각} } (새로고침·탭 닫기 뒤에도 남음)
+  function normDirty(d) { // 옛 형식(시각만 / 배열)도 같은 모양으로
+    if (!d) return { at: 0, keys: {}, add: {}, del: {} };
+    if (typeof d !== 'object') { const o = { at: +d || 0, keys: {}, add: {}, del: {} }; for (const k of SYNC_KEYS) if (k !== 'bdr.saved') o.keys[k.slice(4)] = [o.at]; for (const x of (store.get('bdr.saved', []) || []).map(toKey)) o.add[x] = o.at; return o; }
+    const at = +d.at || 0, obj = (v, f) => Array.isArray(v) ? Object.fromEntries(v.map(x => [f(x), at])) : (v && typeof v === 'object' ? v : {});
+    const keys = Array.isArray(d.keys) ? Object.fromEntries(d.keys.filter(n => n !== 'saved').map(n => [n, [at]])) : (d.keys && typeof d.keys === 'object' ? d.keys : {});
+    return { at, keys, add: obj(d.add, toKey), del: obj(d.del, toKey) };
+  }
   function markDirty(k, prev, v) {
-    const d = store.get('bdr.syncDirty', null), o = d && typeof d === 'object' ? d : d ? { keys: SYNC_KEYS.map(x => x.slice(4)), add: (k === 'bdr.saved' ? prev : store.get('bdr.saved', [])) || [], del: [] } : { keys: [], add: [], del: [] }; // 옛 형식(시각만): 무엇이 바뀌었는지 몰라 이 기기 값 전부를 변경으로 봄
-    const n = k.slice(4), keys = new Set(o.keys || []), add = new Set(o.add || []), del = new Set(o.del || []); keys.add(n);
+    const o = normDirty(store.get('bdr.syncDirty', null)), now = Date.now(), n = k.slice(4);
     if (k === 'bdr.saved') { const a = new Set((prev || []).map(toKey)), b = new Set((v || []).map(toKey));
-      for (const x of b) if (!a.has(x)) { add.add(x); del.delete(x); }
-      for (const x of a) if (!b.has(x)) { del.add(x); add.delete(x); } }
-    storeSet0('bdr.syncDirty', { at: Date.now(), keys: [...keys], add: [...add].slice(-500), del: [...del].slice(-500) });
+      for (const x of b) if (!a.has(x)) { o.add[x] = now; delete o.del[x]; }
+      for (const x of a) if (!b.has(x)) { o.del[x] = now; delete o.add[x]; } }
+    else o.keys[n] = [now, o.keys[n] && o.keys[n].length > 1 ? o.keys[n][1] : (prev ?? null)]; // 바꾸기 전 값은 처음 바꿀 때 것을 유지
+    const trim = m => Object.fromEntries(Object.entries(m).slice(-500));
+    storeSet0('bdr.syncDirty', { at: now, keys: o.keys, add: trim(o.add), del: trim(o.del) });
   }
   store.set = (k, v) => { const sync = !acctApplying && SYNC_KEYS.includes(k) && authTok(), prev = sync ? store.get(k, null) : null; storeSet0(k, v); if (k === 'bdr.saved') savedSeen = new Set((v || []).map(toKey)); if (sync && JSON.stringify(prev) !== JSON.stringify(v ?? null)) { markDirty(k, prev, v); clearTimeout(acctTimer); acctTimer = setTimeout(pushSync, 1200); } };
-  // 못 올린 변경을 서버 값 위에 얹기: 저장 글은 (서버 ∪ 이 기기에서 추가) − 이 기기에서 해제, 설정은 이 기기에서 바꾼 것만 이 기기 값 → 다른 기기의 최신 변경을 통째로 덮지 않음
-  function mergeDirty(data, d) {
-    const loc = localData(), out = { ...data }, o = d && typeof d === 'object' ? d : { keys: SYNC_KEYS.map(k => k.slice(4)), add: loc.saved || [], del: [] };
-    for (const n of o.keys || []) if (n !== 'saved' && loc[n] !== undefined) out[n] = loc[n];
-    const del = new Set((o.del || []).map(toKey));
-    out.saved = [...new Set([...(data.saved || []).map(toKey), ...(o.add || []).map(toKey)])].filter(x => !del.has(x)).slice(-500);
+  // 못 올린 변경을 서버 값 위에 얹기 (srvAt: 서버 데이터가 마지막으로 바뀐 시각)
+  //  · 설정: 이 기기에서 바꾼 뒤 서버가 또 바뀌었고, 서버 값이 '내가 바꾸기 전 값'과 다르면 다른 기기가 바꾼 것 → 서버 값. 아니면 이 기기 값
+  //  · 해제한 글: 해제 뒤 서버가 바뀌었으면(다른 기기가 다시 저장했을 수 있음) 서버 값을 따름, 아니면 해제
+  //  · 추가한 글: 항상 합침 — 서버가 받은 적 없는 글이라 다른 기기가 일부러 지웠을 수 없음(저장 글이 사라지는 쪽이 더 큰 손해)
+  const srvNewer = (srvAt, t) => !!srvAt && srvAt > t + (+store.get('bdr.srvSkew', 0) || 0); // 기기 시계와 서버 시계 차이를 보정
+  function mergeDirty(data, d, srvAt) {
+    const loc = localData(), out = { ...data }, o = normDirty(d), J = v => JSON.stringify(v ?? null);
+    for (const [n, [t, base]] of Object.entries(o.keys)) {
+      if (n === 'saved' || loc[n] === undefined) continue;
+      const other = srvNewer(srvAt, t) && (base === undefined || J(data[n]) !== J(base));
+      if (!other) out[n] = loc[n];
+    }
+    const delNow = new Set(Object.entries(o.del).filter(([, t]) => !srvNewer(srvAt, t)).map(([k]) => k));
+    out.saved = [...new Set([...(data.saved || []).map(toKey), ...Object.keys(o.add)])].filter(x => !delNow.has(x)).slice(-500);
     return out;
   }
   async function acctApi(path, opt = {}) {
@@ -1913,14 +1931,24 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     applyTheme(); render(); renderMapPref();
   }
   let syncRetry = 0;
-  async function pushSync() {
+  // 올리기 전에 서버 최신 값을 받아 이 기기 변경과 합친 뒤 올림 → 탭을 열어 둔 사이 다른 기기가 바꾼 것을 통째로 덮지 않음
+  // opt.pre: 방금 받은 서버 응답(다시 받지 않음) / opt.asIs: 로그인 직후처럼 이미 합친 이 기기 값을 그대로 올림
+  async function pushSync(opt = {}) {
     if (!authTok()) return false;
-    const at = (store.get('bdr.syncDirty', null) || {}).at ?? store.get('bdr.syncDirty', null), sent = localData();
-    try { const res = await acctApi('/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: sent }) }); acctLast = Date.now();
-      const now = store.get('bdr.syncDirty', null); if (now && ((now.at ?? now) === at)) storeSet0('bdr.syncDirty', null); // 올리는 사이 또 바뀌었으면 표시 유지
-      if (res && res.alertPending) { // 서버가 알림 조건 반영을 미룸(하루 한도) → 이 기기 조건을 기억해 두고 다음 날 다시 올림
+    const d0 = store.get('bdr.syncDirty', null), at = d0 && typeof d0 === 'object' ? d0.at : d0;
+    try {
+      const srv = opt.asIs ? null : (opt.pre || await acctApi('/me'));
+      if (srv && srv.data && Object.keys(srv.data).length) {
+        const m = keepPendAlert(mergeDirty(srv.data, d0, srv.updated), srv.updated), loc = localData();
+        if (SYNC_KEYS.some(k => JSON.stringify(m[k.slice(4)] ?? null) !== JSON.stringify(loc[k.slice(4)] ?? null))) applyData(m);
+      }
+      const sent = localData();
+      const res = await acctApi('/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: sent }) }); acctLast = Date.now();
+      if (res && typeof res.updated === 'number') storeSet0('bdr.srvSkew', res.updated - Date.now()); // 서버 시계 − 기기 시계
+      const now = store.get('bdr.syncDirty', null); if (now && ((typeof now === 'object' ? now.at : now) === at)) storeSet0('bdr.syncDirty', null); // 올리는 사이 또 바뀌었으면 표시 유지
+      if (res && res.alertPending) { // 서버가 알림 조건 반영을 미룸(하루 한도) → 이 기기 조건과 그때 서버 조건(base)을 기억해 두고 다음 날 다시 올림
         if (!store.get('bdr.alertPend', null)) toast('알림 조건은 다른 기기에 내일 이어서 반영돼요');
-        storeSet0('bdr.alertPend', { at: Date.now(), alert: sent.alert ?? null });
+        storeSet0('bdr.alertPend', { at: Date.now(), srv: res.updated ?? null, alert: sent.alert ?? null, base: srv && srv.data ? srv.data.alert ?? null : undefined });
       } else if (store.get('bdr.alertPend', null)) storeSet0('bdr.alertPend', null);
       clearTimeout(syncRetry); syncRetry = 0; if (MY || !$('acctModal').hidden) renderAcct(); return true; }
     catch (e) {
@@ -1930,28 +1958,31 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
       if (!syncRetry) syncRetry = setTimeout(() => { syncRetry = 0; pushSync(); }, 65e3); // 429·5xx·네트워크: 표시를 남기고 약 65초 뒤 다시
       return false; }
   }
-  // 알림 조건 보류 중이면 서버의 옛 조건으로 덮지 않음. 서버 조건이 이 기기 조건과 같아지면 보류 해제
-  function keepPendAlert(data) {
+  // 알림 조건 보류 중이면 서버의 옛 조건으로 덮지 않음. 다만 보류 뒤 다른 기기가 알림 조건을 바꿨으면(서버 조건 ≠ 보류 때 서버 조건) 그쪽을 따르고 보류를 버림
+  function keepPendAlert(data, srvAt) {
     const pd = store.get('bdr.alertPend', null); if (!pd) return data;
-    if (JSON.stringify(data.alert ?? null) === JSON.stringify(pd.alert)) { storeSet0('bdr.alertPend', null); return data; }
+    const J = v => JSON.stringify(v ?? null);
+    if (J(data.alert) === J(pd.alert)) { storeSet0('bdr.alertPend', null); return data; }
+    const other = pd.base !== undefined ? J(data.alert) !== J(pd.base) && (pd.srv == null || !srvAt || srvAt > pd.srv) : srvNewer(srvAt, pd.at); // 옛 보류 기록(base 없음)은 시각만으로 판단
+    if (other) { storeSet0('bdr.alertPend', null); return data; }
     return { ...data, alert: pd.alert };
   }
   async function pullSync(first) {
     if (!authTok()) return;
     try {
-      const { data, devices, admin } = await acctApi('/me'); acctDevices = devices || 0; acctAdmin = !!admin;
-      if (!data || !Object.keys(data).length) { await pushSync(); const al0 = store.get('bdr.alert', null); if (first && store.get(PUSH_KEY, null) && al0 && al0.filters) { await subscribePush(al0, { silent: true }); try { acctDevices = (await acctApi('/me')).devices || acctDevices; } catch {} } return; } // 비어 있는 새 계정 → 이 기기 값 올리기 + 알림 켠 기기는 계정에 연결(탈퇴 때 함께 정리되게)
+      const me = await acctApi('/me'), { data, devices, admin } = me; acctDevices = devices || 0; acctAdmin = !!admin;
+      if (!data || !Object.keys(data).length) { await pushSync({ asIs: true }); const al0 = store.get('bdr.alert', null); if (first && store.get(PUSH_KEY, null) && al0 && al0.filters) { await subscribePush(al0, { silent: true }); try { acctDevices = (await acctApi('/me')).devices || acctDevices; } catch {} } return; } // 비어 있는 새 계정 → 이 기기 값 올리기 + 알림 켠 기기는 계정에 연결(탈퇴 때 함께 정리되게)
       if (first) { // 로그인 직후: 저장한 글은 합치고, 계정에 없는 설정은 이 기기 값 유지
         const loc = localData(), merged = { ...loc };
         for (const [k, v] of Object.entries(data)) if (v !== null && v !== undefined) merged[k] = v;
         merged.saved = [...new Set([...(data.saved || []), ...(loc.saved || [])])].slice(-500);
-        applyData(merged); await pushSync();
+        applyData(merged); await pushSync({ asIs: true });
         const al = store.get('bdr.alert', null); // 이 기기가 이미 알림을 켜 둔 상태면 계정에 묶어 맞춤 알림을 같이 받게 함
         if (store.get(PUSH_KEY, null) && al && al.filters) { await subscribePush(al, { silent: true }); try { acctDevices = (await acctApi('/me')).devices || acctDevices; } catch {} }
       } else {
         const dirty = store.get('bdr.syncDirty', null), pd = store.get('bdr.alertPend', null);
-        if (dirty) { applyData(keepPendAlert(mergeDirty(data, dirty))); await pushSync(); } // 못 올린 변경: 서버 값과 합쳐 이 기기에 반영하고 올림(실패해도 합친 값이 남아 다음에 다시)
-        else { applyData(keepPendAlert(data)); acctLast = Date.now(); }
+        if (dirty) { applyData(keepPendAlert(mergeDirty(data, dirty, me.updated), me.updated)); await pushSync({ pre: me }); } // 못 올린 변경: 서버 값과 항목별로 합쳐 이 기기에 반영하고 올림(실패해도 합친 값이 남아 다음에 다시)
+        else { applyData(keepPendAlert(data, me.updated)); acctLast = Date.now(); }
         if (!dirty && pd && kstToday() > new Date(pd.at + 9 * 3600e3).toISOString().slice(0, 10) && store.get('bdr.alertPend', null)) await pushSync(); // 다음 날: 미룬 알림 조건 다시 올림
       }
       renderAcct();
