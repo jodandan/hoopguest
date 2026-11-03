@@ -184,7 +184,7 @@ export async function loadRR(env) {
   try { const x = r ? JSON.parse(r.v) : null; if (x && typeof x === 'object') return x; } catch {}
   return { g: '', rounds: [] };
 }
-export const saveRRStmt = (env, rr) => (rr.rounds && rr.rounds.length) || rr.g
+export const saveRRStmt = (env, rr) => (rr.rounds && rr.rounds.length) || rr.g || (rr.sent && Object.keys(rr.sent).length)
   ? env.DB.prepare("INSERT INTO meta (k, v) VALUES ('rr', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(JSON.stringify(rr))
   : env.DB.prepare("DELETE FROM meta WHERE k = 'rr'");
 

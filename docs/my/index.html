@@ -1759,7 +1759,24 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   const authTok = () => store.get(AUTH_KEY, null);
   const localData = () => Object.fromEntries(SYNC_KEYS.map(k => [k.slice(4), store.get(k, null)]));
   const storeSet0 = store.set;
-  store.set = (k, v) => { storeSet0(k, v); if (k === 'bdr.saved') savedSeen = new Set((v || []).map(toKey)); if (!acctApplying && SYNC_KEYS.includes(k) && authTok()) { storeSet0('bdr.syncDirty', Date.now()); clearTimeout(acctTimer); acctTimer = setTimeout(pushSync, 1200); } }; // syncDirty: 아직 계정에 못 올린 변경이 있음(새로고침해도 남음)
+  // syncDirty: 아직 계정에 못 올린 변경 { at, keys:[바뀐 설정 이름], add:[저장], del:[해제] } — 새로고침·탭 닫기 뒤에도 남음
+  function markDirty(k, prev, v) {
+    const d = store.get('bdr.syncDirty', null), o = d && typeof d === 'object' ? d : d ? { keys: SYNC_KEYS.map(x => x.slice(4)), add: (k === 'bdr.saved' ? prev : store.get('bdr.saved', [])) || [], del: [] } : { keys: [], add: [], del: [] }; // 옛 형식(시각만): 무엇이 바뀌었는지 몰라 이 기기 값 전부를 변경으로 봄
+    const n = k.slice(4), keys = new Set(o.keys || []), add = new Set(o.add || []), del = new Set(o.del || []); keys.add(n);
+    if (k === 'bdr.saved') { const a = new Set((prev || []).map(toKey)), b = new Set((v || []).map(toKey));
+      for (const x of b) if (!a.has(x)) { add.add(x); del.delete(x); }
+      for (const x of a) if (!b.has(x)) { del.add(x); add.delete(x); } }
+    storeSet0('bdr.syncDirty', { at: Date.now(), keys: [...keys], add: [...add].slice(-500), del: [...del].slice(-500) });
+  }
+  store.set = (k, v) => { const sync = !acctApplying && SYNC_KEYS.includes(k) && authTok(), prev = sync ? store.get(k, null) : null; storeSet0(k, v); if (k === 'bdr.saved') savedSeen = new Set((v || []).map(toKey)); if (sync && JSON.stringify(prev) !== JSON.stringify(v ?? null)) { markDirty(k, prev, v); clearTimeout(acctTimer); acctTimer = setTimeout(pushSync, 1200); } };
+  // 못 올린 변경을 서버 값 위에 얹기: 저장 글은 (서버 ∪ 이 기기에서 추가) − 이 기기에서 해제, 설정은 이 기기에서 바꾼 것만 이 기기 값 → 다른 기기의 최신 변경을 통째로 덮지 않음
+  function mergeDirty(data, d) {
+    const loc = localData(), out = { ...data }, o = d && typeof d === 'object' ? d : { keys: SYNC_KEYS.map(k => k.slice(4)), add: loc.saved || [], del: [] };
+    for (const n of o.keys || []) if (n !== 'saved' && loc[n] !== undefined) out[n] = loc[n];
+    const del = new Set((o.del || []).map(toKey));
+    out.saved = [...new Set([...(data.saved || []).map(toKey), ...(o.add || []).map(toKey)])].filter(x => !del.has(x)).slice(-500);
+    return out;
+  }
   async function acctApi(path, opt = {}) {
     const r = await fetch(PUSH_API + path, { ...opt, headers: { ...(opt.headers || {}), Authorization: 'Bearer ' + authTok() } });
     if (r.status === 401) { store.set(AUTH_KEY, null); renderAcct(); throw new Error('401'); }
@@ -1782,13 +1799,26 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   let syncRetry = 0;
   async function pushSync() {
     if (!authTok()) return false;
-    const at = store.get('bdr.syncDirty', null);
-    try { await acctApi('/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: localData() }) }); acctLast = Date.now();
-      if (store.get('bdr.syncDirty', null) === at) storeSet0('bdr.syncDirty', null); // 올리는 사이 또 바뀌었으면 표시 유지
+    const at = (store.get('bdr.syncDirty', null) || {}).at ?? store.get('bdr.syncDirty', null), sent = localData();
+    try { const res = await acctApi('/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: sent }) }); acctLast = Date.now();
+      const now = store.get('bdr.syncDirty', null); if (now && ((now.at ?? now) === at)) storeSet0('bdr.syncDirty', null); // 올리는 사이 또 바뀌었으면 표시 유지
+      if (res && res.alertPending) { // 서버가 알림 조건 반영을 미룸(하루 한도) → 이 기기 조건을 기억해 두고 다음 날 다시 올림
+        if (!store.get('bdr.alertPend', null)) toast('알림 조건은 다른 기기에 내일 이어서 반영돼요');
+        storeSet0('bdr.alertPend', { at: Date.now(), alert: sent.alert ?? null });
+      } else if (store.get('bdr.alertPend', null)) storeSet0('bdr.alertPend', null);
       clearTimeout(syncRetry); syncRetry = 0; if (MY || !$('acctModal').hidden) renderAcct(); return true; }
-    catch (e) { // 429·5xx·네트워크 실패: 표시를 남기고 약 65초 뒤 한 번 더 (서버 한도는 분 단위)
-      if (String(e && e.message) !== '401') { if (!store.get('bdr.syncDirty', null)) storeSet0('bdr.syncDirty', Date.now()); if (!syncRetry) syncRetry = setTimeout(() => { syncRetry = 0; pushSync(); }, 65e3); }
+    catch (e) {
+      const st = Number(e && e.message);
+      if (st === 401) return false;
+      if (st >= 400 && st < 500 && st !== 429) { storeSet0('bdr.syncDirty', null); toast('계정에 저장하지 못한 변경이 있어요. 이 기기에는 그대로 남아 있어요'); return false; } // 400·413 등은 다시 보내도 같음 → 재시도 안 함
+      if (!syncRetry) syncRetry = setTimeout(() => { syncRetry = 0; pushSync(); }, 65e3); // 429·5xx·네트워크: 표시를 남기고 약 65초 뒤 다시
       return false; }
+  }
+  // 알림 조건 보류 중이면 서버의 옛 조건으로 덮지 않음. 서버 조건이 이 기기 조건과 같아지면 보류 해제
+  function keepPendAlert(data) {
+    const pd = store.get('bdr.alertPend', null); if (!pd) return data;
+    if (JSON.stringify(data.alert ?? null) === JSON.stringify(pd.alert)) { storeSet0('bdr.alertPend', null); return data; }
+    return { ...data, alert: pd.alert };
   }
   async function pullSync(first) {
     if (!authTok()) return;
@@ -1802,9 +1832,12 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
         applyData(merged); await pushSync();
         const al = store.get('bdr.alert', null); // 이 기기가 이미 알림을 켜 둔 상태면 계정에 묶어 맞춤 알림을 같이 받게 함
         if (store.get(PUSH_KEY, null) && al && al.filters) { await subscribePush(al, { silent: true }); try { acctDevices = (await acctApi('/me')).devices || acctDevices; } catch {} }
-      } else if (store.get('bdr.syncDirty', null) && !(await pushSync())) { /* 못 올린 변경이 있는데 아직도 못 올림 → 서버 값으로 덮어쓰지 않음(재시도 예약됨) */ }
-      else if (store.get('bdr.syncDirty', null)) { /* 방금 올림 → 서버 값이 곧 이 기기 값 */ acctLast = Date.now(); }
-      else { applyData(data); acctLast = Date.now(); }
+      } else {
+        const dirty = store.get('bdr.syncDirty', null), pd = store.get('bdr.alertPend', null);
+        if (dirty) { applyData(keepPendAlert(mergeDirty(data, dirty))); await pushSync(); } // 못 올린 변경: 서버 값과 합쳐 이 기기에 반영하고 올림(실패해도 합친 값이 남아 다음에 다시)
+        else { applyData(keepPendAlert(data)); acctLast = Date.now(); }
+        if (!dirty && pd && kstToday() > new Date(pd.at + 9 * 3600e3).toISOString().slice(0, 10) && store.get('bdr.alertPend', null)) await pushSync(); // 다음 날: 미룬 알림 조건 다시 올림
+      }
       renderAcct();
     } catch {}
   }

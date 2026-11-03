@@ -201,6 +201,7 @@ const RR_MAX_POSTS = 60;    // 합친 라운드의 글 상한(오래된 글부�
 const KV_GET_BUDGET = 700;
 const SKIP_MAX = 1500;      // 이미 받은 구독 기록 상한(넘치면 오래된 기록부터 버림 → 중복 가능, 누락 없음)
 const SWEEP_SAMPLE = 300;
+const SENT_MAX = 600;       // rr.sent 상한(9시간 새 글 수보다 충분히 큼, 행 크기 약 15KB 이하)
 // 구독 키(해시)만 목록으로 — 값은 필요할 때만 get (KV 읽기 절약). 정렬해 라운드로빈 순서로 씀
 async function listSubKeys(env) {
   const out = []; let cursor;
@@ -256,10 +257,16 @@ export async function runNotify(env, now = Date.now()) {
   if (!Array.isArray(rr.rounds)) rr.rounds = [];
   if (!Number.isInteger(rr.seq)) rr.seq = 0;
   if (!rr.skip || typeof rr.skip !== 'object' || Array.isArray(rr.skip)) rr.skip = {};
+  // rr.sent = { 글 키: 올라온 시각 } — 최근 9시간 안에 새 글 라운드로 보낸 글. seen 저장이 계속 실패해도(KV 한도·장애)
+  // 같은 글이 다시 '새 글'로 잡혀 새 라운드가 생기지 않게 함. 9시간 지난 기록은 버림, 최대 SENT_MAX개
+  if (!rr.sent || typeof rr.sent !== 'object' || Array.isArray(rr.sent)) rr.sent = {};
+  for (const [k, t] of Object.entries(rr.sent)) if (!(now - t < FRESH_MS)) delete rr.sent[k];
   rr.rounds = rr.rounds.filter(r => r && typeof r === 'object');
   rr.rounds.forEach(r => { delete r.skip; if (!Number.isInteger(r.id)) r.id = ++rr.seq; }); // 옛 형식 호환
   const rrBefore = JSON.stringify(rr);
   // 새 글 알림은 이번 data.json을 읽었을 때만(이어 보내는 라운드도 지금 살아 있는 글로 다시 거르므로 — 못 읽으면 다음 cron에)
+  f.fresh = f.fresh.filter(p => !(p.key in rr.sent)); // 이미 라운드로 보낸 글 제외 → 남는 게 없으면 seen 저장만 다시 시도
+  out.fresh = f.fresh.length;
   let wantNew = !f.quiet && !!f.liveKeys && (f.fresh.length > 0 || rr.rounds.length > 0);
   let subs = null;
   if (wantNew) { try { subs = await listSubKeys(env); } catch (e) { err('list', e); wantNew = false; } } // 해시 목록(값은 아래에서 필요한 만큼만)
@@ -282,7 +289,11 @@ export async function runNotify(env, now = Date.now()) {
   if (wantNew && f.fresh.length) {
     const inRound = new Set(rr.rounds.flatMap(r => Array.isArray(r.posts) ? r.posts.map(p => p.key) : []));
     const posts = f.fresh.filter(p => !inRound.has(p.key)).slice(0, 30).map(compact);
-    if (posts.length) { rr.rounds.push({ id: ++rr.seq, start: rr.g, wrapped: false, posts }); addedRound = true; }
+    if (posts.length) {
+      rr.rounds.push({ id: ++rr.seq, start: rr.g, wrapped: false, posts }); addedRound = true;
+      for (const p of posts) rr.sent[p.key] = Date.parse(p.posted) || now;
+      const ent = Object.entries(rr.sent); if (ent.length > SENT_MAX) rr.sent = Object.fromEntries(ent.sort((a, b) => b[1] - a[1]).slice(0, SENT_MAX));
+    }
     seenLater = f.changed;
   }
   const subCache = new Map(); // 이번 cron에서 읽은 구독 값 (h → 값 | null)
