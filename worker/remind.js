@@ -15,6 +15,7 @@ export const DELIVER_WINDOW = 15 * 60e3;   // 푸시 후 이 시간 안에만 /s
 export const LATE_WINDOW = 6 * 3600e3;     // 푸시 TTL(6시간) — 늦게 깨어난 기기에는 제목 없이 '곧 시작' 안내만
 export const MAX_AHEAD = 30 * 864e5;       // 30일 넘게 먼 글은 거부
 export const REMIND_D1_DAY = 30000;        // /remind 전체 하루 D1 쓰기 행 상한
+export const REMIND_D1_DAY_IP = 5000;      // 같은 접속지(/64·/48) 하루 상한
 const KST = 9 * 3600e3;
 
 const kstParts = t => { const s = new Date(t + KST).toISOString(); return { date: s.slice(0, 10), start: s.slice(11, 16) }; };
@@ -84,8 +85,12 @@ export async function replaceReminders(env, sh, items, ip, now = Date.now()) {
   const rules = [{ k: 'rm:' + sh, ms: 60e3, max: 10, cost: 1 }, { k: 'rq:' + sh, ms: 3600e3, max: 30, cost: 1 }, { k: 'rh:' + sh, ms: 3600e3, max: 300, cost: rows }];
   if (ip) rules.push({ k: 'ri:' + ip.ih, ms: 3600e3, max: 600, cost: rows });
   if (ip && ip.ih48) rules.push({ k: 'ri48:' + ip.ih48, ms: 3600e3, max: 1500, cost: rows });
-  const d1rows = rows * 3 + rules.length + 1; // +1 = 전체 상한 기록 자신
-  rules.push({ k: 'rg', ms: 864e5, max: REMIND_D1_DAY, cost: d1rows });
+  // 하루 D1 행 상한: 전체(rg) + 한 접속지가 전체를 혼자 채우지 못하게 /64(rgi)·/48(rg48) 따로(전체의 1/6)
+  const day = [{ k: 'rg', ms: 864e5, max: REMIND_D1_DAY }];
+  if (ip) day.push({ k: 'rgi:' + ip.ih, ms: 864e5, max: REMIND_D1_DAY_IP });
+  if (ip && ip.ih48) day.push({ k: 'rg48:' + ip.ih48, ms: 864e5, max: REMIND_D1_DAY_IP });
+  const d1rows = rows * 3 + rules.length + day.length;
+  for (const d of day) rules.push({ ...d, cost: d1rows });
   if (await limitAll(env, rules, now)) return { error: 'too many', status: 429 };
   const st = [];
   if (removed.length) st.push(env.DB.prepare(`DELETE FROM reminders WHERE sh = ? AND k IN (${removed.map(() => '?').join(',')})`).bind(sh, ...removed));
@@ -187,7 +192,8 @@ export async function cleanupD1(env, now) {
   await dbInit(env);
   const r = await env.DB.batch([
     env.DB.prepare('DELETE FROM reminders WHERE start_at < ?').bind(now - 864e5),
-    env.DB.prepare('DELETE FROM rl WHERE at < ?').bind(now - 2 * 864e5), // 하루 창 기록이 있어 2일
+    // 횟수 기록: 창은 모두 하루 이하라 마지막 기록 후 하루 지나면 그 창은 끝났음 → 창 끝 뒤 최대 하루(+정리 주기 1시간) 안에 삭제
+    env.DB.prepare('DELETE FROM rl WHERE at < ?').bind(now - 864e5),
     env.DB.prepare('DROP TABLE IF EXISTS subips'), // 이전 버전이 쓰던 IP 해시 표(더는 안 씀) — 남은 기록 삭제
   ]);
   const kv = await drainKvDel(env, 300);

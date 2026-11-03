@@ -26,6 +26,12 @@ function serve() {
   return new Promise(r => srv.listen(0, '127.0.0.1', () => r(srv)));
 }
 
+// 사이트맵에서 /r/·/g/ 페이지 한 쪽씩 고름 (없으면 건너뜀)
+async function samplePages() {
+  const xml = LIVE ? await fetch(BASE + '/sitemap.xml').then(r => r.ok ? r.text() : '').catch(() => '') : await readFile(join(DOCS, 'sitemap.xml'), 'utf8').catch(() => '');
+  const locs = [...xml.matchAll(/<loc>https?:\/\/[^/<]+(\/[^<]*)<\/loc>/g)].map(m => m[1]);
+  return [['지역', locs.find(u => /^\/r\/[^/]+\/[^/]+\/$/.test(u)) || locs.find(u => u.startsWith('/r/'))], ['체육관', locs.find(u => u.startsWith('/g/'))]].filter(([, u]) => u);
+}
 const fails = [];
 const fail = m => { fails.push(m); console.log('✗ ' + m); };
 const ok = m => console.log('✓ ' + m);
@@ -75,6 +81,18 @@ try {
     // 마이페이지도 스크립트 오류 없이 열리는지
     await page.goto(BASE + '/my/', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(1500);
+
+    // 수집 때 만드는 지역(/r/)·체육관(/g/) 페이지 한 쪽씩: 공지 스크립트 등 인라인 스크립트가 문법 오류 없이 도는지
+    for (const [kind, path] of await samplePages()) {
+      const pe = [];
+      const onErr = e => pe.push(e.message); page.on('pageerror', onErr);
+      const res = await page.goto(BASE + path, { waitUntil: 'load', timeout: 30000 }).catch(e => null);
+      await page.waitForTimeout(400); page.off('pageerror', onErr);
+      if (!res || !res.ok()) fail(`[${vw.name}] ${kind} 페이지 ${path} 열기 실패(${res ? res.status() : '응답 없음'})`);
+      else if (pe.length) fail(`[${vw.name}] ${kind} 페이지 ${path} 스크립트 오류: ${pe[0].slice(0, 120)}`);
+      else ok(`[${vw.name}] ${kind} 페이지 ${path} 스크립트 오류 없음`);
+      errs.splice(0, errs.length, ...errs.filter(m => !pe.includes(m))); // 아래 공통 집계와 중복 보고하지 않게
+    }
 
     if (errs.length) fail(`[${vw.name}] 스크립트 오류 ${errs.length}건: ${[...new Set(errs)].slice(0, 3).join(' | ')}`);
     else ok(`[${vw.name}] 스크립트 오류 없음`);

@@ -401,7 +401,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
 .tab{color:var(--tab-dim)}
 .tab.few{flex:0 0 auto}
 @media (max-width:359px){.tab .n{margin-left:3px;padding:3px 3px 2px}.tabs{gap:0}}
-.card a.title{padding:3px 0}
+.card a.title{padding:3px 0;min-height:32px;box-sizing:border-box}
 .nudge{position:fixed;left:16px;right:76px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:30;max-width:520px;margin:0 auto;background:var(--card);color:var(--text);border:1px solid var(--line2);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:12px 14px;font-size:var(--fs-sm);line-height:1.5;opacity:0;transform:translateY(12px);transition:opacity var(--dur) ease,transform var(--dur) ease}
 .nudge.on{opacity:1;transform:none}.nudge p{margin:0}.nudge b{color:var(--accent)}.nudge .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.nudge .acts .chip{max-width:100%;white-space:normal}
 .nudge .chip.primary{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--on-accent);font-weight:700}
@@ -441,7 +441,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   // 이 브라우저가 시작한 로그인·탈퇴(bdr.loginNonce 일치)만 받는다 — 남이 보낸 #login= 링크로 다른 계정이 심기지 않게
   (function () { var m = /^#(login|withdrawn|login_error)=([A-Za-z0-9_-]{1,80})(?:&n=([A-Za-z0-9_-]{16,64}))?$/.exec(location.hash); if (!m) return;
     try { var want = JSON.parse(localStorage.getItem('bdr.loginNonce') || 'null');
-      if (m[1] !== 'login_error' && (!want || m[3] !== want)) m = null;
+      if (m[1] !== 'login_error' && (!want || m[3] !== want)) { if (m[1] === 'login') localStorage.setItem('bdr.authMsg', JSON.stringify('login_error:nonce')); m = null; } // 토큰은 버리고 '로그인하지 못했어요' 안내
       if (m) { localStorage.removeItem('bdr.loginNonce');
         if (m[1] === 'login') { var old = localStorage.getItem('bdr.auth'); if (old && JSON.parse(old) !== m[2]) localStorage.setItem('bdr.authOld', old); localStorage.setItem('bdr.auth', JSON.stringify(m[2])); }
         if (m[1] === 'withdrawn') localStorage.removeItem('bdr.auth');
@@ -453,7 +453,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   // 운영자 기기 집계 제외: ?noga=1 로 한 번 열면 이 기기(브라우저)는 GA를 안 불러옴, ?noga=0 으로 해제
   var NOGA = false;
   try { var ng = /[?&]noga=([01])\b/.exec(location.search);
-    if (ng) { history.replaceState(null, '', location.pathname + location.hash);
+    if (ng) { history.replaceState(null, '', location.pathname + location.search.replace(/([?&])noga=[01]\b&?/, '$1').replace(/[?&]$/, '') + location.hash); // noga만 지우고 다른 조건은 유지
       if (ng[1] === '1') { if (confirm('이 기기를 방문 통계(GA)에서 뺄까요? (운영자용)')) localStorage.setItem('bdr.noga', '1'); }
       else { localStorage.removeItem('bdr.noga'); setTimeout(function () { alert('이 기기도 다시 방문 통계(GA)에 잡힙니다.'); }, 300); } }
     NOGA = localStorage.getItem('bdr.noga') === '1'; } catch (e) {}
@@ -1188,7 +1188,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     track('day_jump', { idx: b.dataset.day });
   });
   const toTop = $('toTop');
-  addEventListener('scroll', () => { toTop.hidden = scrollY < innerHeight * 1.5; }, { passive: true });
+  addEventListener('scroll', () => { const h = scrollY < innerHeight * 1.5; if (toTop.hidden !== h) { toTop.hidden = h; placeToast(); } }, { passive: true }); // 맨 위로 버튼이 나타나거나 사라지면 토스트 자리도 다시
   toTop.onclick = () => { scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); $('fToggle').focus({ preventScroll: true }); };
   function bindUnk() {
     const b = $('unkBtn'); if (!b) return;
@@ -1280,7 +1280,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     syncSaved(); // 다른 탭에서 바꾼 저장 목록과 먼저 합침(덮어쓰기 방지)
     saved.has(k) ? saved.delete(k) : saved.add(k);
     store.set('bdr.saved', [...saved]); queueRemind();
-    const sp = byKey(k), remindable = saved.has(k) && sp.date && sp.start && !sp.closed && !sp.amb && minsToStart(sp) <= 30 * 1440, ask = remindable && minsToStart(sp) > 120 && canNudge('save');
+    const sp = byKey(k), remindable = saved.has(k) && sp.date && sp.start && !sp.closed && !sp.amb && minsToStart(sp) < 30 * 1440, ask = remindable && minsToStart(sp) > 120 && canNudge('save');
     if (ask) { store.set('bdr.remindAsk', Date.now()); askedVisit = 'save'; track('alert_nudge', { step: 'shown', via: 'save' }); toastAct('저장했어요 · 시작 2시간 전에 알려드릴까요?', isIOS && !standalone ? '홈 화면에 추가' : '알림 켜기', () => { track('alert_nudge', { step: 'open', via: 'save' }); openAlertFlow('save'); }, kb && (() => document.querySelector(`#list .star[data-key="${CSS.escape(k)}"]`))); }
     else if (remindable && store.get(PUSH_KEY, null) && minsToStart(sp) > 0 && minsToStart(sp) <= 120)
       toast(minsToStart(sp) > 10 ? '저장했어요 · 곧 시작해서 몇 분 안에 바로 알려드려요' : '저장했어요 · 곧 시작해서 미리 알림은 없어요'); // 서버: 시작 2시간 안 글은 다음 확인(5분마다) 때 바로 보냄, 10분 안은 보내지 않음(remindItems)
@@ -1408,14 +1408,16 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   }
   const focusIn = el => el.contains(document.activeElement);
   // 연습경기 탭: 상대 팀 글 알림을 바로 켤 수 있게 안내 (이미 연습경기 알림을 받거나 닫았으면 안 보임)
+  let matchShown = false;
   function renderMatchHint() {
     const el = $('matchHint'); if (!el) return;
     const al = store.get('bdr.alert', null), on = !!store.get('bdr.push', null);
     const covered = on && al && al.filters && (al.filters.boards || []).includes('match');
     const busy = askVis().some(k => k !== 'match') || (askedVisit && askedVisit !== 'match');
     const denied = !window.HG_INAPP && 'Notification' in window && Notification.permission === 'denied';
-    if (S.board !== 'match' || covered || denied || store.get('bdr.matchHint', 0) || busy || MY) { el.hidden = true; return; }
-    if (el.hidden) { askedVisit = 'match'; el.hidden = false; }
+    const cool = !matchShown && ago14('bdr.matchHintAt'); // 보여 준 뒤 14일은 다시 안 보임(이번 방문 안에서는 탭을 오가도 유지)
+    if (S.board !== 'match' || covered || denied || cool || store.get('bdr.matchHint', 0) || busy || MY) { el.hidden = true; return; }
+    if (el.hidden) { askedVisit = 'match'; el.hidden = false; if (!matchShown) { matchShown = true; store.set('bdr.matchHintAt', Date.now()); } }
     if (el.dataset.cta === ALERT_CTA) return; // 내용이 같으면 다시 쓰지 않음(화면낭독기 반복 낭독 방지)
     el.dataset.cta = ALERT_CTA;
     el.innerHTML = `연습경기 상대를 찾고 있다면, 새 초청 글이 올라올 때 바로 알려드릴게요. <button class="linkbtn" id="mhOn" type="button">${ALERT_CTA}</button><button class="linkbtn x" id="mhX" type="button" aria-label="안내 닫기">✕</button>`;
@@ -1554,7 +1556,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   const INAPP = window.HG_INAPP || '', isAndroid = /Android/i.test(navigator.userAgent);
   const APP_NAME = { kakao: '카카오톡', instagram: '인스타그램', facebook: '페이스북', naver: '네이버 앱', daum: '다음 앱', band: '밴드', line: '라인', webview: '앱' }[INAPP] || '앱';
   // 인앱 브라우저 → 바깥 브라우저로 열기. 카톡은 전용 주소, 안드로이드는 크롬 intent, 아이폰 다른 앱은 직접 못 열어서 안내
-  const canOpenExt = () => INAPP === 'kakao' || isAndroid;
+  const canOpenExt = () => INAPP === 'kakao' || (isAndroid && INAPP !== 'webview'); // 앱 이름을 모르는 일반 웹뷰는 intent가 막힐 수 있어 주소 복사로
+  const EXT = isIOS ? '사파리' : '브라우저';
   // 바깥 브라우저로 넘기는 주소: 해시는 넘기되 로그인 토큰 조각(#login=…, #withdrawn=…)은 절대 넘기지 않음
   const safeHash = () => { const h = location.hash; return !h || h === '#' || /^#(login|withdrawn)/i.test(h) || h.includes('#', 1) ? '' : h; };
   const safeUrl = () => location.origin + location.pathname + location.search + safeHash();
@@ -1563,7 +1566,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   function openExternal(via) {
     track('inapp', { app: INAPP, step: 'open', via: via || '-' });
     if (INAPP === 'kakao') { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(safeUrl()); return; }
-    if (isAndroid) { location.href = `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;end`; return; }
+    if (canOpenExt()) { location.href = `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(safeUrl())};end`; return; } // 크롬이 없으면 기본 브라우저로
     const box = $('pushBox'); if (box.hidden) $('btnPush').click(); else renderPush();
     box.scrollIntoView({ block: 'nearest', behavior: calm() ? 'auto' : 'smooth' }); $('pushCopy')?.focus({ preventScroll: true });
   }
@@ -1572,9 +1575,9 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     try { await navigator.clipboard.writeText(url); ok = true; } catch {
       const ta = document.createElement('textarea'); ta.value = url; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-100px;opacity:0';
       document.body.appendChild(ta); ta.select(); try { ok = document.execCommand('copy'); } catch {} ta.remove(); }
-    toast(ok ? '주소를 복사했어요. 사파리 주소창에 붙여 넣으세요' : '주소창의 링크를 복사해 주세요'); track('inapp', { app: INAPP, step: 'copy' });
+    toast(ok ? `주소를 복사했어요. ${EXT} 주소창에 붙여 넣으세요` : '주소창의 링크를 복사해 주세요'); track('inapp', { app: INAPP, step: 'copy' });
   }
-  const inappMsg = () => canOpenExt() ? `브라우저로 열면 알림도 받아요 · 저장(☆)은 여기서도 돼요 <button class="linkbtn" type="button" data-ext>브라우저로 열기</button>` : `<b>⋯</b>→사파리로 열면 알림도 받아요 · 저장(☆)은 여기서도 돼요 <button class="linkbtn" type="button" data-copy>주소 복사</button>`;
+  const inappMsg = () => canOpenExt() ? `브라우저로 열면 알림도 받아요 · 저장(☆)은 여기서도 돼요 <button class="linkbtn" type="button" data-ext>브라우저로 열기</button>` : (isIOS ? `<b>⋯</b>→사파리로 열면 알림도 받아요 · 저장(☆)은 여기서도 돼요 ` : `브라우저에 붙여 넣으면 알림도 받아요 · 저장(☆)은 여기서도 돼요 `) + `<button class="linkbtn" type="button" data-copy>주소 복사</button>`;
   // 첫 화면 상단 1회성 띠 (닫으면 14일 안 보임)
   function renderInappHint() {
     const el = $('inappHint'); if (!el || !INAPP || MY) return;
@@ -1607,7 +1610,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   // 저장 글 리마인더: 알림 구독 중이면 앞으로 열릴 저장 글을 서버에 통째로 보냄(서버가 시작 2시간 전 푸시)
   // 시작까지 10분 넘게·30일 안 남은 글만 (10분 안이면 알림이 의미 없음). url은 서버가 쓰지 않아 뺌
   function remindItems() {
-    return [...saved].map(k => DATA.find(x => x.key === k)).filter(p => p && p.date && p.start && !p.closed && !p.amb && minsToStart(p) > 10 && minsToStart(p) <= 30 * 1440) // 시각이 애매한 글(오전·저녁 불분명) 제외, 서버처럼 30일 안만
+    return [...saved].map(k => DATA.find(x => x.key === k)).filter(p => p && p.date && p.start && !p.closed && !p.amb && minsToStart(p) > 10 && minsToStart(p) < 30 * 1440) // 시각이 애매한 글(오전·저녁 불분명) 제외, 서버처럼 30일 안만
       .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start)).slice(0, 50)
       .map(p => ({ key: p.key, title: Array.from(cleanTitle(p)).slice(0, 80).join(''), date: p.date, start: p.start })); // 이모지 등 서로게이트 쌍을 반으로 자르지 않게 글자 단위로
   }
@@ -1626,7 +1629,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
       const prevLive = prev && prev.e === e && Array.isArray(prev.i) ? prev.i.filter(t => parseInt(t, 36) > cut) : null;
       if (!force && (prevLive ? prevLive.join() === sig.join() : !sig.length)) return; // 바뀐 게 없거나, 보낸 적 없는데 빈 목록
       const r = await fetch(PUSH_API + '/remind', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint, items }) });
-      if (r.ok) storeSet0('bdr.remindSig', sig.length ? { e, i: sig } : null);
+      const j = r.ok ? await r.json().catch(() => null) : null;
+      if (r.ok) storeSet0('bdr.remindSig', sig.length && (!j || typeof j.n !== 'number' || j.n === items.length) ? { e, i: sig } : null); // 서버가 받은 수가 다르면 지문을 안 남겨 다음에 다시 보냄
     } catch {}
   }
   // 저장·해제, 데이터 로드 직후, 로그인 동기화 후, 구독 직후(force: 새 구독이라 서버 목록이 비어 있을 수 있음)에 같은 함수로
@@ -1647,7 +1651,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     const box = $('pushBox'); const cur = store.get(PUSH_KEY, null);
     let html = '';
     if (!window.isSecureContext) html = '보안 연결(HTTPS)을 준비 중이에요. 곧 알림을 켤 수 있어요.';
-    else if (INAPP) html = `이 앱 안의 브라우저에선 알림을 켤 수 없어요. <div class="acts">${canOpenExt() ? '<button class="chip primary" type="button" data-ext>브라우저로 열기</button>' : '오른쪽 위 <b>⋯</b> 메뉴 → <b>사파리로 열기</b>를 눌러 주세요.<button class="chip" id="pushCopy" type="button" data-copy>주소 복사</button>'}</div>`;
+    else if (INAPP) html = `이 앱 안의 브라우저에선 알림을 켤 수 없어요. <div class="acts">${canOpenExt() ? '<button class="chip primary" type="button" data-ext>브라우저로 열기</button>' : (isIOS ? '오른쪽 위 <b>⋯</b> 메뉴 → <b>사파리로 열기</b>를 눌러 주세요.' : '주소를 복사해 크롬 등 브라우저에 붙여 넣어 주세요.') + '<button class="chip" id="pushCopy" type="button" data-copy>주소 복사</button>'}</div>`;
     else if (isIOS && !standalone) html = '아이폰은 <b>공유 버튼 → 홈 화면에 추가</b>로 앱처럼 설치한 뒤, 홈 화면 아이콘으로 열어서 알림을 켤 수 있어요. (iOS 16.4 이상)';
     else if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) html = '이 브라우저는 웹 알림을 지원하지 않아요. 크롬이나 사파리 최신 버전에서 열어주세요.';
     else if (Notification.permission === 'denied') html = '브라우저에서 이 사이트 알림이 차단돼 있어요. 브라우저 설정 → 사이트 설정에서 알림을 허용해 주세요.';
@@ -1655,7 +1659,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
       html = cur ? `지금 <b>${esc(cur.label)}</b> 조건으로 알림을 받고 있어요.` : '지금 고른 조건에 맞는 새 글이 올라오면 알려드려요.';
       html += `<br>알림 조건: <b>${esc(pushLabel())}</b>`;
       html += `<div class="acts"><button class="chip primary" id="pushOn" type="button">${cur ? '이 조건으로 바꾸기' : '이 조건으로 알림 받기'}</button>${cur ? '<button class="chip" id="pushOff" type="button">알림 끄기</button>' : ''}<button class="chip inst" type="button" data-inst="panel" hidden>앱으로 설치</button></div>`;
-      html += '<div class="note">저장한 글(☆)은 시작 2시간 전에도 알려드려요. 밤 12시~아침 7시에 올라온 글은 아침 7시에 한 번에 알려드려요. 위 필터를 바꾼 뒤 누르면 조건이 바뀌어요. 서버에는 알림 주소·조건과 알림용 저장 글(제목·시각, 시작 하루 뒤 삭제)만 저장되고, 이름·연락처는 저장하지 않아요.' + (store.get('bdr.auth', null) ? ' 로그인 중이라 알림을 켠 내 모든 기기에 같은 조건이 적용돼요. 내 동네·시간대·요일로 따로 정하려면 [내 계정 → 맞춤 알림]을 쓰세요.' : '') + '</div>';
+      html += '<div class="note">저장한 글(☆)은 시작 2시간 전에도 알려드려요. 밤 12시~아침 7시에 올라온 글은 아침 7시에 한 번에 알려드려요. 위 필터를 바꾼 뒤 누르면 조건이 바뀌어요. 서버에는 알림 주소·조건과 알림용 저장 글(제목·시각, 시작 하루 뒤 삭제)만 저장되고, 이름·연락처는 저장하지 않아요.' + (store.get('bdr.auth', null) ? ' 로그인 중이라 알림을 켠 내 모든 기기에 같은 조건이 적용돼요. 내 동네·시간대·요일로 따로 정하려면 [마이페이지 → 맞춤 알림]을 쓰세요.' : '') + '</div>';
     }
     box.innerHTML = html; syncInst();
     box.querySelector('[data-ext]')?.addEventListener('click', () => openExternal('panel'));
@@ -1666,6 +1670,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
   }
   function sameKey(sub, raw) { try { const k = new Uint8Array(sub.options.applicationServerKey || []); return !k.length || (k.length === raw.length && k.every((b, i) => b === raw[i])); } catch { return true; } }
   async function subscribePush(preset, opt = {}) { // preset: 계정에 저장된 알림 조건으로 켤 때 / opt.silent: 안내 없이(로그인 직후 기기 연결 등)
+    if (!(preset && preset.filters) && S.r1 === NEARBY && !S.home) { if (!opt.silent) toast('‘내 근처’ 알림은 내 동네를 먼저 골라야 해요. 필터에서 동네를 골라 주세요'); return renderPush(); } // 동네 없는 '내 근처'는 알림 지역이 비어 모든 글이 옴
     try {
       const perm = opt.silent ? Notification.permission : await Notification.requestPermission();
       if (perm !== 'granted') { toast('알림 권한이 필요해요'); return renderPush(); }
@@ -1677,7 +1682,7 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
       if (sub && !sameKey(sub, raw)) { await sendRemind(true, true); await fetch(PUSH_API + '/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {}); await sub.unsubscribe().catch(() => {}); sub = null; storeSet0('bdr.remindSig', null); } // 서버 알림 키가 바뀌면 옛 구독(서버 쪽 리마인더 포함)을 풀고 새 키로 다시 구독 → 아래 queueRemind(true)로 저장 글 다시 보냄
       sub ||= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
       const pre = preset && preset.filters ? preset : null;
-      const filters = pre ? pre.filters : pushFilters(), label = pre ? pre.label : pushLabel(), query = pre ? pre.query || '' : stateQuery();
+      const filters = pre ? pre.filters : pushFilters(), label = pre ? pre.label : pushLabel(), query0 = pre ? pre.query || '' : stateQuery(), query = query0.length > 300 ? '' : query0; // 서버 한도(300자)를 넘으면 잘려 필터가 깨지므로 아예 뺌
       const tok = typeof authTok === 'function' ? authTok() : null; // 로그인 중이면 이 기기를 계정에 묶어 맞춤 알림 조건을 같이 받음
       const r = await fetch(PUSH_API + '/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify({ subscription: sub.toJSON(), filters, label, query }) });
       if (!r.ok) throw new Error(r.status);
@@ -1690,10 +1695,14 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     } catch (e) { if (!opt.silent) toast(String(e && e.message) === '429' ? '알림 켜기 요청이 많아요. 1시간쯤 뒤에 다시 시도해 주세요' : '알림을 켜지 못했어요. 잠시 후 다시 시도해 주세요'); }
     renderPush(); renderPushBtn(); renderMatchHint();
   }
+  async function unsubServer(endpoint) { // 서버 구독 지우기 — 실패 응답(503 등)이면 1회 다시
+    const go = () => fetch(PUSH_API + '/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint }) }).then(r => r.ok).catch(() => false);
+    if (!(await go())) { await new Promise(r => setTimeout(r, 1500)); await go(); }
+  }
   async function unsubscribePush() {
     try {
       const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription();
-      if (sub) { await sendRemind(true, true); storeSet0('bdr.remindSig', null); await fetch(PUSH_API + '/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {}); await sub.unsubscribe(); }
+      if (sub) { await sendRemind(true, true); storeSet0('bdr.remindSig', null); await unsubServer(sub.endpoint); await sub.unsubscribe(); }
     } catch {}
     store.set(PUSH_KEY, null); track('push_unsubscribe');
     toast('알림을 껐어요'); renderPush(); renderPushBtn(); renderMatchHint();
@@ -2002,6 +2011,8 @@ body{background-image:repeating-linear-gradient(90deg,transparent 0 71px,var(--w
     if (msg === 'login') { const old = store.get('bdr.authOld', null); if (old) { storeSet0('bdr.authOld', null); fetch(PUSH_API + '/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + old } }).catch(() => {}); } toast('로그인했어요. 이 기기의 저장 글·설정을 계정과 합쳤어요'); track('login', { step: 'done' }); await pullSync(true); }
     else if (msg === 'withdrawn:1') { try { const reg = await navigator.serviceWorker.ready; const s = await reg.pushManager.getSubscription(); if (s) { await sendRemind(true, true); await fetch(PUSH_API + '/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: s.endpoint }) }).catch(() => {}); await s.unsubscribe(); } } catch {} storeSet0('bdr.remindSig', null); store.set(PUSH_KEY, null); renderPush(); renderPushBtn(); toast('탈퇴했어요. 계정 데이터와 이 기기 알림을 모두 지웠어요'); track('login', { step: 'withdrawn' }); }
     else if (msg === 'login_error:mismatch') toast('탈퇴하려던 계정과 다른 카카오 계정이라 탈퇴하지 않았어요');
+    else if (msg === 'login_error:rate') toast('로그인 요청이 많아요. 잠시 후 다시 시도해 주세요');
+    else if (msg === 'login_error:withdraw') toast('탈퇴를 마치지 못했어요. 다시 시도해 주세요');
     else if (msg) toast('로그인하지 못했어요. 다시 시도해 주세요');
     else if (authTok()) await pullSync(false);
   })();
