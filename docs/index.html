@@ -625,7 +625,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
 </div>
 <div class="modal" id="acctModal" hidden><div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="acctTitle"><div class="shead"><b id="acctTitle">카카오 로그인</b><button class="sx" type="button" data-close aria-label="닫기">✕</button></div><div class="pushbox" id="acctBox"></div></div></div>
 <div class="modal" id="contactModal" hidden><div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ctTitle"><div class="shead"><b id="ctTitle">문의하기</b><button class="sx" type="button" data-close aria-label="닫기">✕</button></div><form class="ctform" id="ctForm" novalidate><fieldset class="ctkind"><legend>어떤 문의인가요?</legend><label><input type="radio" name="ctKind" value="delete" checked><span>게시글 제외 요청</span></label><label><input type="radio" name="ctKind" value="error"><span>정보 오류</span></label><label><input type="radio" name="ctKind" value="idea"><span>제안</span></label><label><input type="radio" name="ctKind" value="etc"><span>기타</span></label></fieldset><label class="ctl" for="ctBody">내용</label><textarea id="ctBody" rows="5" maxlength="2000" placeholder="게시글 제외 요청이면 글 제목이나 원문 링크를 적어 주세요."></textarea><label class="ctl" for="ctReply">답장 받을 연락처 <small>(선택)</small></label><input id="ctReply" type="text" maxlength="100" autocomplete="email" placeholder="이메일이나 오픈채팅 링크"><input class="hp" id="ctHp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"><p class="ctmsg" id="ctMsg" role="status"></p><button class="ctsend" id="ctSend" type="submit">보내기</button><p class="note">보낸 내용은 운영자만 봐요. 연락처는 답장할 때만 쓰고, 처리하고 6개월 뒤 지워요. <a href="/privacy/">개인정보 처리방침</a></p></form><div class="ctdone" id="ctDone" hidden><p><b>보냈어요.</b> 확인하고 처리할게요. 연락처를 남겼다면 그리로 답장드려요.</p><button class="ctsend" type="button" data-close>닫기</button></div></div></div>
-<div class="nudge" id="alertNudge" role="region" aria-label="새 글 알림 제안" aria-live="polite" hidden><p id="ngTx">다음엔 다시 찾아보지 않아도 돼요. <b>지금 고른 조건</b>으로 새 글이 올라오면 알려드릴까요?</p><div class="acts"><button class="chip sm primary" id="ngOn" type="button">알림 받기</button><button class="chip sm inst" type="button" data-inst="nudge" hidden>앱으로 설치</button><button class="chip sm" id="ngX" type="button">괜찮아요</button></div></div>
+<div class="nudge" id="alertNudge" role="region" aria-label="새 글 알림 제안" aria-live="polite" hidden><p id="ngTx">다음엔 다시 찾아보지 않아도 돼요. <b>지금 고른 조건</b>으로 새 글이 올라오면 알려드릴까요?</p><div class="acts"><button class="chip sm primary" id="ngOn" type="button">알림 받기</button><button class="chip sm inst" type="button" data-inst="nudge" hidden>홈 화면에 추가</button><button class="chip sm" id="ngX" type="button">괜찮아요</button></div></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -1571,7 +1571,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     const lab = filtLabel();
     if (el.dataset.cta === ALERT_CTA && el.querySelector('b')) { const b = el.querySelector('b'); if (b.textContent !== lab) b.textContent = lab; return; } // 조건 이름만 바꿈(낭독 최소화)
     el.dataset.cta = ALERT_CTA; el.setAttribute('aria-live', 'polite'); setTimeout(() => el.setAttribute('aria-live', 'off'), 1500); // 처음 한 번만 읽힘
-    el.innerHTML = `이 조건(<b>${esc(lab)}</b>)으로 새 글 알림 받을까요? <button class="linkbtn" id="fhOn" type="button">${ALERT_CTA}</button><button class="linkbtn" type="button" data-inst="filter" hidden>앱으로 설치</button><button class="linkbtn x" id="fhX" type="button" aria-label="알림 제안 닫기">✕</button>`;
+    el.innerHTML = `이 조건(<b>${esc(lab)}</b>)으로 새 글 알림 받을까요? <button class="linkbtn" id="fhOn" type="button">${ALERT_CTA}</button><button class="linkbtn" type="button" data-inst="filter" hidden>홈 화면에 추가</button><button class="linkbtn x" id="fhX" type="button" aria-label="알림 제안 닫기">✕</button>`;
     syncInst();
     const done = () => { const had = focusIn(el); filtDone = true; el.hidden = true; return had; };
     $('fhOn').onclick = () => { track('alert_nudge', { step: 'open', via: 'filter', board: S.board }); done(); openAlertFlow('filter'); };
@@ -1692,10 +1692,10 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     track('inapp', { app: INAPP, step: 'shown' });
   }
   renderInappHint();
-  // 앱으로 설치: 크롬 등은 beforeinstallprompt를 잡아 두었다가 버튼으로 띄움
+  // 홈 화면에 추가(PWA 설치): 크롬 등은 beforeinstallprompt를 잡아 두었다가 버튼으로 띄움
   let instEvt = null;
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instEvt = e; syncInst(); });
-  window.addEventListener('appinstalled', () => { instEvt = null; track('app_install', { ctx: window.HG_CTX || '-' }); toast('앱으로 설치했어요'); syncInst(); });
+  window.addEventListener('appinstalled', () => { instEvt = null; track('app_install', { ctx: window.HG_CTX || '-' }); toast('홈 화면에 추가했어요'); syncInst(); });
   function syncInst() { const off = !instEvt || standalone || !!INAPP; document.querySelectorAll('[data-inst],[data-instrow]').forEach(b => { b.hidden = off; }); }
   $('ngOn').textContent = ALERT_CTA;
   document.addEventListener('keydown', e => { // Esc로 알림 제안 닫기
@@ -1753,13 +1753,13 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     let html = '';
     if (!window.isSecureContext) html = '보안 연결(HTTPS)을 준비 중이에요. 곧 알림을 켤 수 있어요.';
     else if (INAPP) html = `이 앱 안의 브라우저에선 알림을 켤 수 없어요. <div class="acts">${canOpenExt() ? '<button class="chip primary" type="button" data-ext>브라우저로 열기</button>' : '오른쪽 위 <b>⋯</b> 메뉴 → <b>사파리로 열기</b>를 눌러 주세요.<button class="chip" id="pushCopy" type="button" data-copy>주소 복사</button>'}</div>`;
-    else if (isIOS && !standalone) html = '아이폰은 <b>공유 버튼 → 홈 화면에 추가</b>로 앱처럼 설치한 뒤, 홈 화면 아이콘으로 열어서 알림을 켤 수 있어요. (iOS 16.4 이상)';
+    else if (isIOS && !standalone) html = '아이폰은 <b>공유 버튼 → 홈 화면에 추가</b>를 한 뒤, 홈 화면 아이콘으로 열어서 알림을 켤 수 있어요. (iOS 16.4 이상)';
     else if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) html = '이 브라우저는 웹 알림을 지원하지 않아요. 크롬이나 사파리 최신 버전에서 열어주세요.';
     else if (Notification.permission === 'denied') html = '브라우저에서 이 사이트 알림이 차단돼 있어요. 브라우저 설정 → 사이트 설정에서 알림을 허용해 주세요.';
     else {
       html = cur ? `지금 <b>${esc(cur.label)}</b> 조건으로 알림을 받고 있어요.` : '지금 고른 조건에 맞는 새 글이 올라오면 알려드려요.';
       html += `<br>알림 조건: <b>${esc(pushLabel())}</b>`;
-      html += `<div class="acts"><button class="chip primary" id="pushOn" type="button">${cur ? '이 조건으로 바꾸기' : '이 조건으로 알림 받기'}</button>${cur ? '<button class="chip" id="pushOff" type="button">알림 끄기</button>' : ''}<button class="chip inst" type="button" data-inst="panel" hidden>앱으로 설치</button></div>`;
+      html += `<div class="acts"><button class="chip primary" id="pushOn" type="button">${cur ? '이 조건으로 바꾸기' : '이 조건으로 알림 받기'}</button>${cur ? '<button class="chip" id="pushOff" type="button">알림 끄기</button>' : ''}<button class="chip inst" type="button" data-inst="panel" hidden>홈 화면에 추가</button></div>`;
       html += '<div class="note">저장한 글(☆)은 시작 2시간 전에도 알려드려요. 밤 12시~아침 7시에 올라온 글은 아침 7시에 한 번에 알려드려요. 위 필터를 바꾼 뒤 누르면 조건이 바뀌어요. 서버에는 알림 주소·조건과 알림용 저장 글(제목·시각, 시작 하루 뒤 삭제)만 저장되고, 이름·연락처는 저장하지 않아요.' + (store.get('bdr.auth', null) ? ' 로그인 중이라 알림을 켠 내 모든 기기에 같은 조건이 적용돼요. 내 동네·시간대·요일로 따로 정하려면 [내 계정 → 맞춤 알림]을 쓰세요.' : '') + '</div>';
     }
     box.innerHTML = html; syncInst();
@@ -1914,7 +1914,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
       + `<div class="myrow"><span class="k">내 동네</span><select class="chip sm" id="myHome" aria-label="내 동네"><option value="">고르지 않음</option>${Object.entries(GEO_R1).map(([r1, ns]) => `<optgroup label="${r1}">${ns.map(n => `<option value="${esc(n)}"${n === S.home ? ' selected' : ''}>${esc(shortR2(n))}</option>`).join('')}</optgroup>`).join('')}</select></div>`
       + `<div class="myrow" id="myMap" role="group" aria-label="길찾기 지도"><span class="k">길찾기 지도</span>${opt('kakao', ma, '카카오맵')}${opt('naver', ma, '네이버 지도')}${opt('', ma || '', '매번 묻기')}</div>`
       + `<div class="myrow" id="myTheme" role="group" aria-label="화면"><span class="k">화면</span>${opt('', th === 'dark' || th === 'light' ? th : '', '폰 설정 따르기')}${opt('light', th, '밝게')}${opt('dark', th, '어둡게')}</div>`
-      + `<div class="myrow" data-instrow hidden><span class="k">앱</span><button class="chip sm inst" type="button" data-inst="my" hidden>앱으로 설치</button></div>`
+      + `<div class="myrow" data-instrow hidden><span class="k">홈 화면</span><button class="chip sm inst" type="button" data-inst="my" hidden>홈 화면에 추가</button></div>`
       + (on ? '' : '<div class="note">이 설정과 저장한 글은 이 기기에만 저장돼요. 로그인하면 폰과 PC에서 같이 써요.</div>')
       + '</section>'
       + `<section class="pushbox mysec" aria-labelledby="myAcH"><h3 id="myAcH">계정</h3>`
