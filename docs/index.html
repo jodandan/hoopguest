@@ -517,6 +517,15 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
 @media (max-width:359px){.tabs .tab{font-size:13px;padding:0 4px}.tab .n{margin-left:2px}}
 .cacts>.shr,.cacts>.ics,.cacts>.rep{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line2);color:var(--text)}
 .card .swipe{border-radius:0}
+/* 11-03 2차 QA */
+@media (orientation:landscape) and (max-height:500px){.hgcourt{display:none}}
+.my .hgcourt{display:none}
+.sheet *,.sheet,.mapbox,#map,.mysec,.mysec *,.navbox .chip,.repbox .chip,.unkbox .chip,.state .chip,.nudge .chip{border-radius:0!important}
+.has-strip .dayh{position:static}
+.card .tags{flex-wrap:nowrap;min-width:0;overflow:hidden}
+.card .tags .tag{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .tags .newdot,.card .tags .tag:not(.g){flex:none}
+.card .tags .tag.g{min-width:3.5em}
 </style>
 <script>
   // 카카오 로그인에서 돌아오면 주소의 #login=… 을 GA보다 먼저 꺼내 저장하고 주소에서 지운다
@@ -1195,7 +1204,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     list.querySelectorAll('.dayg').forEach(sec => { let prev = null;
       let pc = null; sec.querySelectorAll('.card').forEach(c => c.classList.remove('same'));
       sec.querySelectorAll('.card').forEach(c => { const s = c.querySelector('.time .s'); const t = s && !s.classList.contains('off') ? s.textContent : null;
-        c.classList.toggle('same', !!t && t === prev && !!pc && Math.abs(c.offsetLeft - pc.offsetLeft) < 2); prev = t; pc = c; }); });
+        const cl = c.classList.contains('closed'); c.classList.toggle('same', !cl && !!t && t === prev && !!pc && Math.abs(c.offsetLeft - pc.offsetLeft) < 2); prev = cl ? null : t; pc = c; }); });
   }
   // ---- 11-02 미리보기: 상단 '지금 내 동네' 패널 — 내 동네를 안 골랐으면 '설정하기', 골랐으면 오늘 남은 글 수 ----
   if (innerWidth < 360) { const q0 = $('q'); if (q0) q0.placeholder = '동네·팀 검색'; }
