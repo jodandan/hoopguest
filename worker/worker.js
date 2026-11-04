@@ -2,6 +2,7 @@
 // - POST /subscribe, /unsubscribe : 웹 푸시 구독 저장/삭제 (알림 주소 + 조건만 저장)
 // - GET  /vapid                   : 푸시 공개키 (최초 요청 때 자동 생성해 KV에 보관)
 // - POST /sub-state               : 구독 주소로 지금 알림 조건(조건·이름·링크) 조회 — 서비스워커가 알림 만들 때 사용
+// - POST /test-push               : 이 기기에 테스트 알림 1번 즉시 발송 → { ok, status(푸시 서비스 응답), reason } (진단용)
 // - POST /remind                  : 저장한 글 리마인더 목록 통째 교체 (시작 2시간 전 알림, 빈 배열이면 삭제)
 // - cron(5분마다)                 : GitHub 수집 워크플로 실행 요청 (가장 중요 — 다른 단계와 따로 실행)
 //                                   + 새 글(조건 맞는 구독) + 때가 된 저장 글 리마인더(조용한 시간에도) → 구독마다 푸시 1회
@@ -121,10 +122,13 @@ function cleanFilters(f = {}) {
   };
 }
 const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+// '내 근처'인데 동네 목록이 비어 있으면 어떤 글과도 맞지 않음(조용히 영영 안 옴) → 저장하지 않음
+const nearEmpty = f => f.r1 === '내 근처' && !f.regions.length;
 // 계정 알림 조건이 바뀌면 그 계정에 묶인 기기 구독을 모두 같은 조건으로 (KV 쓰기 = 바뀐 기기 수)
 // 값이 같은 기기는 쓰지 않고, 계정당 하루 KV 쓰기 40회·전체 150회까지 (넘으면 -1: 계정 조건 저장을 보류해 다음 PUT에서 재시도)
 async function applyAlert(env, sids, alert, uid) {
   const next = { filters: cleanFilters(alert.filters), label: str(alert.label, 80), query: str(alert.query, 300) };
+  if (nearEmpty(next.filters)) return 0; // 동네 없는 '내 근처' 조건은 기기에 옮기지 않음(기존 조건 유지)
   const todo = [];
   for (const sid of sids.slice(0, 20)) {
     const v = await env.SUBS.get(sid, 'json');
@@ -454,13 +458,14 @@ export const checkAndPush = runNotify; // 이전 이름 호환
 export async function sweepSubs(env) {
   const keys = await listSubKeys(env);
   const step = Math.max(1, Math.ceil(keys.length / SWEEP_SAMPLE));
-  let n = 0, seen = 0;
+  let n = 0, seen = 0, near = 0;
   for (let i = 0; i < keys.length && seen < SWEEP_SAMPLE; i += step) {
     const v = await env.SUBS.get('sub:' + keys[i], 'json'); seen++;
     const ep = v && v.sub && v.sub.endpoint;
     if (typeof ep === 'string' && !hostAllowed(ep)) n++;
+    if (v && v.filters && nearEmpty(cleanFilters(v.filters))) near++; // 동네 없는 '내 근처' — 알림이 영영 안 가는 구독
   }
-  return { total: keys.length, sampled: seen, outsideAllowList: n, estimate: seen ? Math.round(n * keys.length / seen) : 0 };
+  return { total: keys.length, sampled: seen, outsideAllowList: n, estimate: seen ? Math.round(n * keys.length / seen) : 0, nearEmpty: near };
 }
 
 // 이전 배포(origin 보안 커밋)가 쓰던 KV 'queue'(새 글 알림 대기 구독 id) — 이 버전은 D1 rr로 이어 보내므로 쓰지 않는다.
@@ -470,6 +475,37 @@ async function dropLegacyQueue(env) {
   if (q == null) return { queue: 'none' };
   await env.SUBS.delete('queue');
   return { queueDropped: Array.isArray(q) ? q.length : 0 };
+}
+
+// 테스트 알림: 등록된 구독에만, 구독당 시간 3·하루 10, 접속지(/64) 시간 10, 전체 하루 200 (D1 오류면 503)
+// 보내기 전에 D1 meta 'test:<sh>'에 시각을 남김 → 기기 서비스워커가 /sub-state에서 test:true를 받아 '테스트 알림'을 띄움
+// reason: ok(푸시 서비스가 받음) · expired(404·410 — 구독이 끝나 정리함, 다시 켜야 함) · key(403 — 서버 키와 구독 키 불일치)
+//         busy(429) · rejected(그 밖 4xx) · service(5xx) · network(연결 실패)
+async function handleTestPush(req, env) {
+  const { endpoint } = (await req.json().catch(() => null)) || {};
+  if (typeof endpoint !== 'string' || !hostAllowed(endpoint)) return json(req, { error: 'bad request' }, 400);
+  const h = await sha(endpoint);
+  const rec = await env.SUBS.get('sub:' + h, 'json');
+  const sub = rec && (rec.sub || (rec.endpoint ? { endpoint: rec.endpoint } : null));
+  if (!sub || sub.endpoint !== endpoint) return json(req, { error: 'not found' }, 404);
+  const now = Date.now();
+  const over = await (async () => {
+    const ip = await ipKeys(req, env);
+    return limitAll(env, [{ k: 'tp:' + h, ms: 3600e3, max: 3, cost: 1 }, { k: 'tpd:' + h, ms: 864e5, max: 10, cost: 1 },
+      { k: 'tpi:' + ip.ih, ms: 3600e3, max: 10, cost: 1 }, { k: 'tpg', ms: 864e5, max: 200, cost: 1 }], now);
+  })().catch(e => { console.log('test-push limit', errMsg(e)); return 'down'; });
+  if (over === 'down') return json(req, { error: 'try later' }, 503);
+  if (over) return json(req, { error: 'too many', code: 'rate' }, 429);
+  let v; try { v = await vapid(env); await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind('test:' + h, String(now)).run(); }
+  catch (e) { console.log('test-push prep', errMsg(e)); return json(req, { error: 'try later' }, 503); }
+  let status = 0;
+  try { status = await push(v, sub); } catch (e) { status = 0; }
+  const reason = status >= 200 && status < 300 ? 'ok' : status === 404 || status === 410 ? 'expired' : status === 403 ? 'key'
+    : status === 429 ? 'busy' : status >= 400 && status < 500 ? 'rejected' : status >= 500 ? 'service' : 'network';
+  if (reason !== 'ok') await env.DB.prepare('DELETE FROM meta WHERE k = ?').bind('test:' + h).run().catch(() => {});
+  if (reason === 'expired') await dropSub(env, h).catch(() => {}); // 기존 규칙: D1 정리 성공 뒤 KV 삭제
+  console.log('test-push', status, reason);
+  return json(req, { ok: reason === 'ok', status, reason });
 }
 
 async function handleRemind(req, env) {
@@ -512,6 +548,7 @@ export default {
         const sub = body && body.subscription;
         // 크기 기준은 예전과 같게(글자 수 4000) — 한글 조건이 많은 기존 클라이언트 회귀 방지
         if (!validSubscription(sub) || JSON.stringify(body).length > 4000) return json(req, { error: 'bad request' }, 400);
+        if (nearEmpty(cleanFilters(body.filters))) return json(req, { error: 'bad request', code: 'near' }, 400);
         const id = 'sub:' + await sha(sub.endpoint);
         const rec = { sub: { endpoint: sub.endpoint }, filters: cleanFilters(body.filters), label: str(body.label, 80), query: str(body.query, 300) };
         const old = await env.SUBS.get(id, 'json');
@@ -547,16 +584,19 @@ export default {
         return json(req, { ok: true });
       }
       if (url.pathname === '/sub-state' && req.method === 'POST') {
-        const { endpoint } = (await req.json().catch(() => null)) || {};
+        const { endpoint, peek } = (await req.json().catch(() => null)) || {};
         const h = typeof endpoint === 'string' && hostAllowed(endpoint) ? await sha(endpoint) : null; // 푸시 서비스 주소만
         const v = h ? await env.SUBS.get('sub:' + h, 'json') : null;
         if (!v) return json(req, { error: 'not found' }, 404);
+        // peek: 화면의 구독 확인용 — 존재 여부·조건만, D1은 건드리지 않음(리마인더 전달 표시·테스트 표시를 서비스워커 몫으로 남김)
+        if (peek === true) return json(req, { filters: v.filters || {}, label: v.label || '', query: v.query || '', peek: true });
         // due: 서버가 15분 안에 리마인더 푸시를 보낸 글(넘기며 전달 표시). 조회 실패면 null → 서비스워커가 빈 '새 글' 알림을 띄우지 않음
         // late: 보낸 지 15분~6시간 지났는데 아직 안 뜬 글(소비 안 함, 기기에서 한 번만) / rp: 15분 안에 리마인더 푸시를 보냈음
-        let r = { due: null, late: [], rp: false };
+        let r = { due: null, late: [], rp: false, test: false };
         try { r = await takeDue(env, h); } catch (e) { console.log('sub-state due', String(e && e.message || e)); }
-        return json(req, { filters: v.filters || {}, label: v.label || '', query: v.query || '', due: r.due, late: r.late, rp: r.rp });
+        return json(req, { filters: v.filters || {}, label: v.label || '', query: v.query || '', due: r.due, late: r.late, rp: r.rp, ...(r.test ? { test: true } : {}) });
       }
+      if (url.pathname === '/test-push' && req.method === 'POST') return handleTestPush(req, env);
       if (url.pathname === '/remind' && req.method === 'POST') return handleRemind(req, env);
       const acc = await handleAccount(req, env, url, json, { onAlert: (sids, alert, uid) => applyAlert(env, sids, alert, uid), drainKvDel: max => drainKvDel(env, max) });
       if (acc) return acc;

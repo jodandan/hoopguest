@@ -140,20 +140,24 @@ export async function resetSent(env, sh, sentAt) { await resetSentStmt(env, sh, 
 // 반환 { due:[{key,title,date,start}], late:[…], rp:bool }
 //   late = 보낸 지 15분~6시간(푸시 TTL) 지났는데 아직 안 뜬 글 — 표시하지 않고(소비 안 함) 넘김. 서비스워커가 기기에서 한 번만 띄움
 //   rp   = 15분 안에 이 구독에 리마인더 푸시를 보냈음(누가 이미 받아 감) → 서비스워커가 빈 '새 글' 알림을 띄우지 않게
+// test: 2분 안에 /test-push 를 보냈으면 true (meta 'test:<sh>' 행을 지우며 확인 — 같은 batch라 쿼리 추가 없음, 행 없으면 쓰기 0)
+export const TEST_WINDOW = 120e3;
 export async function takeDue(env, sh, now = Date.now()) {
   await dbInit(env);
-  const [a, b] = await env.DB.batch([
+  const [a, b, c] = await env.DB.batch([
     env.DB.prepare('UPDATE reminders SET dlv_at = ? WHERE sh = ? AND sent_at >= ? AND dlv_at IS NULL AND start_at > ? RETURNING k, title, start_at')
       .bind(now, sh, now - DELIVER_WINDOW, now),
     env.DB.prepare('SELECT k, title, start_at, sent_at FROM reminders WHERE sh = ? AND sent_at >= ? AND dlv_at IS NULL AND start_at > ?')
       .bind(sh, now - LATE_WINDOW, now),
+    env.DB.prepare('DELETE FROM meta WHERE k = ? RETURNING v').bind('test:' + sh),
   ]);
+  const test = (c.results || []).some(r => now - Number(r.v) < TEST_WINDOW);
   const out = rows => rows.sort((x, y) => x.start_at - y.start_at).map(r => ({ key: r.k, title: r.title, ...kstParts(r.start_at) }));
   const due = out(a.results || []);
   const late = out((b.results || []).filter(r => r.sent_at < now - DELIVER_WINDOW));
   let rp = due.length > 0;
   if (!rp) rp = !!(await env.DB.prepare('SELECT 1 AS x FROM reminders WHERE sh = ? AND sent_at >= ? LIMIT 1').bind(sh, now - DELIVER_WINDOW).first());
-  return { due, late, rp };
+  return { due, late, rp, test };
 }
 
 
@@ -196,6 +200,7 @@ export async function cleanupD1(env, now) {
     // 횟수 기록: 창은 모두 하루 이하라 마지막 기록 후 하루 지나면 그 창은 끝났음 → 창 끝 뒤 최대 하루(+정리 주기 1시간) 안에 삭제
     env.DB.prepare('DELETE FROM rl WHERE at < ?').bind(now - 864e5),
     env.DB.prepare('DROP TABLE IF EXISTS subips'), // 이전 버전이 쓰던 IP 해시 표(더는 안 씀) — 남은 기록 삭제
+    env.DB.prepare("DELETE FROM meta WHERE k LIKE 'test:%' AND CAST(v AS INTEGER) < ?").bind(now - 3600e3), // 기기가 안 깨어나 남은 테스트 표시
   ]);
   const kv = await drainKvDel(env, 300);
   return [...r.map(x => x.meta?.changes ?? 0), kv];
