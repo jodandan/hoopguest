@@ -613,6 +613,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
       <div class="row" id="rowView" role="group" aria-label="보기"><span class="lbl">보기</span>
         <button class="chk" id="tgClosed" type="button" aria-pressed="true">마감 숨기기</button>
         <button class="chk" id="tgSaved" type="button" aria-pressed="false">저장한 글만</button>
+        <button class="chk" id="tgFree" type="button" aria-pressed="false">무료만</button>
         <button class="chk" id="tgCompact" type="button" aria-pressed="false">촘촘히 보기</button>
       </div>
       <div class="row" id="rowSrc" role="group" aria-label="출처"><span class="lbl">출처</span></div>
@@ -879,7 +880,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     allTags.forEach(t => { tcnt[t] = countWith({ tags: new Set([...S.tags, t]) }); });
     Object.keys(tcnt).forEach(t => { if (!tcnt[t] && !S.tags.has(t)) delete tcnt[t]; });
     const tkeys = Object.keys(tcnt).sort((a, b) => tcnt[b] - tcnt[a]);
-    $('rowTag').hidden = !S.tags.size; // 조건 태그는 해당 글이 적어 필터에서 뺌(글 카드에만 표시). 예전 공유 링크로 들어온 경우만 풀 수 있게 보여줌
+    $('rowTag').hidden = ![...S.tags].some(t => t !== '무료'); // '무료'는 더보기의 '무료만'으로. 나머지 조건 태그는 해당 글이 적어 필터에서 뺌(글 카드에만 표시). 예전 공유 링크로 들어온 경우만 풀 수 있게 보여줌
     fillRow($('rowTag'), [chip('전체', !S.tags.size, () => { S.tags.clear(); render(); }, 'all')].concat(tkeys.map(t => chip(`${t} ${tcnt[t]}`, S.tags.has(t), () => { S.tags.has(t) ? S.tags.delete(t) : S.tags.add(t); track('tag_filter', { tag: t }); render(); }))));
     $('btnNow').setAttribute('aria-pressed', String(S.soon));
     { const k = countWith({ soon: true }); let info = S.soon ? '켜짐 · 3시간 안에 시작' : `3시간 안에 시작 ${k}건`; S.nextSoon = null;
@@ -889,9 +890,9 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
       }
       $('nowInfo').textContent = info; $('btnNow').classList.toggle('empty', !S.soon && !k); $('btnNow').setAttribute('aria-disabled', String(!S.soon && !k)); }
     $('tgClosed').setAttribute('aria-pressed', S.hideClosed);
-    $('tgSaved').setAttribute('aria-pressed', S.savedOnly);
+    $('tgSaved').setAttribute('aria-pressed', S.savedOnly); $('tgFree').setAttribute('aria-pressed', S.tags.has('무료'));
     $('tgCompact').setAttribute('aria-pressed', S.compact);
-    { const n = (S.week !== '전체') + !!S.savedOnly + !!S.compact + (S.src !== '전체') + !S.hideClosed; $('fMore').querySelector('.n').textContent = n ? ` · ${n}개 적용 중` : ''; if (n && !fMoreTouched) { $('fmore').hidden = false; $('fMore').setAttribute('aria-expanded', 'true'); } }
+    { const n = (S.week !== '전체') + S.tags.has('무료') + !!S.savedOnly + !!S.compact + (S.src !== '전체') + !S.hideClosed; $('fMore').querySelector('.n').textContent = n ? ` · ${n}개 적용 중` : ''; if (n && !fMoreTouched) { $('fmore').hidden = false; $('fMore').setAttribute('aria-expanded', 'true'); } }
     document.body.classList.toggle('compact', S.compact);
     fillRow($('rowSrc'), [['전체', '전체'], ['daum', '다음 BDR'], ['naver', '네이버 농심']].map(([k, l]) => chip(l, S.src === k, () => { S.src = k; track('source_filter', { src: k }); render(); }, k === '전체' ? 'all' : 'srcchip ' + (k === 'naver' ? 'nv' : 'dm'))));
     $('sort').textContent = S.sort === 'new' ? '최신 글순 ⇅' : '일정순 ⇅';
@@ -912,7 +913,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     if (st.week !== '전체') { if (!p.date) return false; const w = wdOf(p.date); if ((st.week === '주말') !== (w === 0 || w === 6)) return false; }
     if (st.slot.size && !st.slot.has(p.slot) && !(p.amb && (st.slot.has('오전') || st.slot.has('저녁')))) return false; // 오전/저녁 미표기 글은 둘 다에 포함
     if (st.soon && !startsSoon(p)) return false;
-    if (st.tags && st.tags.size) { for (const t of st.tags) if (!(p.tags || []).includes(t)) return false; }
+    if (st.tags && st.tags.size) { for (const t of st.tags) if (!(p.tags || []).includes(t) && !(t === '무료' && p.free)) return false; }
     if (q && !(unent(p.title) + (p.team || '') + (p.region1 || '') + (p.region2 || '')).replace(/\s+/g, '').toLowerCase().includes(q)) return false;
     return true;
   }
@@ -1479,6 +1480,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   $('tgClosed').onclick = () => { S.hideClosed = !S.hideClosed; store.set('bdr.hideClosed', S.hideClosed); render(); };
   $('fMore').onclick = () => { const open = $('fmore').hidden; $('fmore').hidden = !open; $('fMore').setAttribute('aria-expanded', String(open)); fMoreTouched = true; track('filter_more', { open: open ? 'y' : 'n' }); };
   $('tgSaved').onclick = () => { S.savedOnly = !S.savedOnly; render(); };
+  $('tgFree').onclick = () => { const on = !S.tags.has('무료'); on ? S.tags.add('무료') : S.tags.delete('무료'); track('tag_filter', { tag: '무료', on: on ? 'y' : 'n', via: 'more' }); render(); };
   $('btnNow').onclick = () => {
     if (!S.soon && $('btnNow').classList.contains('empty')) { track('now_toggle', { on: 'empty', region: S.r1 }); toast(S.nextSoon ? `3시간 안에 시작하는 글이 없어요. 가장 빠른 건 ${S.nextSoon} 시작이에요` : '3시간 안에 시작하는 글이 없어요'); return; }
     S.soon = !S.soon; if (S.soon) { S.date = '전체'; S.week = '전체'; S.slot.clear(); }
