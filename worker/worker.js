@@ -87,11 +87,11 @@ export async function vapidJwt(v, endpoint, now = Date.now()) {
   return t;
 }
 // 내용 없는 푸시(tickle): 알림 내용은 기기의 서비스워커가 사이트 목록을 읽어 조건에 맞게 만든다
-async function push(v, sub) {
+async function push(v, sub, ttl = 21600) {
   const jwt = await vapidJwt(v, sub.endpoint);
   const r = await fetch(sub.endpoint, {
     method: 'POST',
-    headers: { 'Authorization': `vapid t=${jwt}, k=${v.pub}`, 'TTL': '21600', 'Urgency': 'high', 'Content-Length': '0' },
+    headers: { 'Authorization': `vapid t=${jwt}, k=${v.pub}`, 'TTL': String(ttl), 'Urgency': 'high', 'Content-Length': '0' },
     signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined,
   });
   return r.status;
@@ -495,11 +495,17 @@ async function handleTestPush(req, env) {
       { k: 'tpi:' + ip.ih, ms: 3600e3, max: 10, cost: 1 }, { k: 'tpg', ms: 864e5, max: 200, cost: 1 }], now);
   })().catch(e => { console.log('test-push limit', errMsg(e)); return 'down'; });
   if (over === 'down') return json(req, { error: 'try later' }, 503);
-  if (over) return json(req, { error: 'too many', code: 'rate' }, 429);
+  if (over) { // 어느 한도인지: test_hour(이 기기 1시간 3번) · test_day(이 기기 하루 10번) · ip(같은 접속지 1시간 10번) · global(전체 하루 200번)
+    const ks = { ['tp:' + h]: ['test_hour', 3, 3600e3], ['tpd:' + h]: ['test_day', 10, 864e5], tpg: ['global', 200, 864e5] };
+    const { results } = await env.DB.prepare(`SELECT k, win, n FROM rl WHERE k IN (${Object.keys(ks).map(() => '?').join(',')})`).bind(...Object.keys(ks)).all().catch(() => ({ results: [] }));
+    const hit = (results || []).map(r => ks[r.k] && r.win === Math.floor(now / ks[r.k][2]) && r.n >= ks[r.k][1] ? ks[r.k][0] : null).filter(Boolean);
+    const order = ['global', 'test_day', 'test_hour'];
+    return json(req, { error: 'too many', code: order.find(c => hit.includes(c)) || 'ip' }, 429);
+  }
   let v; try { v = await vapid(env); await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)").bind('test:' + h, String(now)).run(); }
   catch (e) { console.log('test-push prep', errMsg(e)); return json(req, { error: 'try later' }, 503); }
   let status = 0;
-  try { status = await push(v, sub); } catch (e) { status = 0; }
+  try { status = await push(v, sub, 300); } catch (e) { status = 0; } // 5분 안에 못 전하면 버림(늦은 테스트 알림 방지)
   const reason = status >= 200 && status < 300 ? 'ok' : status === 404 || status === 410 ? 'expired' : status === 403 ? 'key'
     : status === 429 ? 'busy' : status >= 400 && status < 500 ? 'rejected' : status >= 500 ? 'service' : 'network';
   if (reason !== 'ok') await env.DB.prepare('DELETE FROM meta WHERE k = ?').bind('test:' + h).run().catch(() => {});
@@ -592,9 +598,9 @@ export default {
         if (peek === true) return json(req, { filters: v.filters || {}, label: v.label || '', query: v.query || '', peek: true });
         // due: 서버가 15분 안에 리마인더 푸시를 보낸 글(넘기며 전달 표시). 조회 실패면 null → 서비스워커가 빈 '새 글' 알림을 띄우지 않음
         // late: 보낸 지 15분~6시간 지났는데 아직 안 뜬 글(소비 안 함, 기기에서 한 번만) / rp: 15분 안에 리마인더 푸시를 보냈음
-        let r = { due: null, late: [], rp: false, test: false };
+        let r = { due: null, late: [], rp: false, test: false, tp: false };
         try { r = await takeDue(env, h); } catch (e) { console.log('sub-state due', String(e && e.message || e)); }
-        return json(req, { filters: v.filters || {}, label: v.label || '', query: v.query || '', due: r.due, late: r.late, rp: r.rp, ...(r.test ? { test: true } : {}) });
+        return json(req, { filters: v.filters || {}, label: v.label || '', query: v.query || '', due: r.due, late: r.late, rp: r.rp, ...(r.test ? { test: true } : {}), ...(r.tp ? { tp: true } : {}) });
       }
       if (url.pathname === '/test-push' && req.method === 'POST') return handleTestPush(req, env);
       if (url.pathname === '/remind' && req.method === 'POST') return handleRemind(req, env);

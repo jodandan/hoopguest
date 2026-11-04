@@ -143,7 +143,7 @@ button{font:inherit;color:inherit}
 .ibtn svg{width:16px;height:16px;flex:none}
 .ibtn[aria-pressed="true"],.ibtn[aria-expanded="true"]{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
 .ibtn .dot{position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:var(--accent-strong);border:2px solid var(--bg)}
-.ibtn .dot.warn{width:16px;height:16px;top:-7px;right:-7px;background:var(--star);color:var(--bg);font:800 11px/12px var(--f-body);text-align:center}.ibtn .dot.warn::after{content:'!'}
+.ibtn .dot.warn{width:16px;height:16px;top:-7px;right:-7px;background:var(--star);color:var(--card);font:800 11px/12px var(--f-body);text-align:center}.ibtn .dot.warn::after{content:'!'}.pushbox .pwarn{margin:0 0 8px;padding:8px 10px;border-radius:var(--r-sm);background:var(--btn-soft);border-left:3px solid var(--soon)}
 .ibtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .linkbtn{font-size:var(--fs-sm)}
 /* 지금 갈 수 있는 곳 */
@@ -1785,8 +1785,9 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     else {
       html = cur ? `지금 <b>${esc(cur.label)}</b> 조건으로 알림을 받고 있어요.` : '지금 고른 조건에 맞는 새 글이 올라오면 알려드려요.';
       { const al = store.get('bdr.alert', null), f = cur && al && al.filters; // 지금 받고 있는 구독 조건 점검
-        if (f && f.r1 === NEARBY && !(f.regions || []).length) html += `<p class="pwarn" role="status"><b>지금 조건으로는 알림이 오지 않아요.</b> 내 동네를 고른 뒤 ‘이 조건으로 바꾸기’를 눌러 주세요.</p>`;
-        if (f && (f.slots || []).length) html += '<div class="note">시간대를 고른 조건이라 시간이 적히지 않은 글은 알림에서 빠져요.</div>'; }
+        const nearEmpty = f && f.r1 === NEARBY && !(f.regions || []).length;
+        if (nearEmpty && !pushHealth.bad) html += `<p class="pwarn" role="status"><b>지금 조건으로는 알림이 오지 않아요.</b> 내 동네를 고른 뒤 ‘이 조건으로 바꾸기’를 눌러 주세요.</p>`;
+        else if (f && (f.slots || []).length && !pushHealth.bad) html += '<div class="note">시간대를 고른 조건이라 시간이 적히지 않은 글은 알림에서 빠져요.</div>'; } // 경고는 하나만: 구독 문제 > 조건 문제 > 시간대 안내
       if (cur && pushHealth.bad) html = `<p class="pwarn" role="status"><b>${esc(pushHealth.bad)}</b> <button class="chip sm primary" id="pushFix" type="button">다시 켜기</button></p>` + html;
       html += `<br>알림 조건: <b>${esc(pushLabel())}</b>`;
       html += `<div class="acts"><button class="chip primary" id="pushOn" type="button">${cur ? '이 조건으로 바꾸기' : '이 조건으로 알림 받기'}</button>${cur ? '<button class="chip" id="pushOff" type="button">알림 끄기</button><button class="chip" id="pushTest" type="button">테스트 알림 보내기</button>' : ''}<button class="chip inst" type="button" data-inst="panel" hidden>홈 화면에 추가</button></div>`;
@@ -1805,15 +1806,18 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   }
   // ---- 알림 구독 점검: '켜짐'인데 실제로는 안 오는 경우(권한 꺼짐·기기 구독 사라짐·서버 구독 없음)를 찾아 종 버튼·알림 창에 표시
   let pushHealth = { bad: '', checkedSrv: '' }, pushTestMsg = '';
-  const swReg = () => Promise.race([navigator.serviceWorker.getRegistration(), new Promise(r => setTimeout(() => r(null), 4000))]).catch(() => null);
+  const SW_SLOW = Symbol('slow'); // 서비스워커가 늦게 답하면 '모름' — 구독이 없다고 단정하지 않음
+  const swReg = () => Promise.race([navigator.serviceWorker.getRegistration(), new Promise(r => setTimeout(() => r(SW_SLOW), 4000))]).catch(() => null);
   async function checkPush(withServer) {
     const was = pushHealth.bad;
     if (!store.get(PUSH_KEY, null) || INAPP || !('serviceWorker' in navigator) || !('Notification' in window)) pushHealth.bad = '';
     else if (Notification.permission === 'denied') pushHealth.bad = '알림이 켜진 걸로 저장돼 있지만 브라우저에서 이 사이트 알림을 막아 둬서 오지 않아요. 브라우저 설정 → 사이트 설정 → 알림에서 허용해 주세요.';
-    else if (Notification.permission !== 'granted') pushHealth.bad = '알림 권한이 꺼져 있어 알림이 오지 않아요. 다시 켜 주세요.';
     else {
-      const reg = await swReg(), sub = reg && reg.pushManager ? await reg.pushManager.getSubscription().catch(() => null) : null;
-      if (!sub) pushHealth.bad = '이 기기 알림 구독이 사라졌어요. 다시 켜 주세요.';
+      const reg = await swReg();
+      if (reg === SW_SLOW) return; // 모름: 경고를 새로 띄우지도 지우지도 않음
+      const sub = reg && reg.pushManager ? await reg.pushManager.getSubscription().catch(() => null) : null;
+      // 권한이 'granted'가 아니어도(일부 홈 화면 앱은 'default'로 보고) 구독이 살아 있으면 서버 확인 결과로 판단
+      if (!sub) pushHealth.bad = Notification.permission !== 'granted' ? '알림 권한이 꺼져 있어 알림이 오지 않아요. 다시 켜 주세요.' : '이 기기 알림 구독이 사라졌어요. 다시 켜 주세요.';
       else if (withServer && pushHealth.checkedSrv !== sub.endpoint) {
         // 서버에 이 구독이 있는지 1회 확인. peek: 리마인더를 '전달함'으로 표시하지 않게(서버가 지원하면)
         const r = await fetch(PUSH_API + '/sub-state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint, peek: true }) }).catch(() => null);
@@ -1835,13 +1839,13 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     const b = $('pushTest'); if (b) { b.disabled = true; b.textContent = '보내는 중…'; }
     const done = (m, refix) => { pushTestMsg = m + (refix ? ` <button class="chip sm primary" type="button" data-refix="${refix === 'force' ? 'force' : ''}">다시 켜기</button>` : ''); renderPush(); $('pushTestMsg')?.focus?.(); };
     try {
-      if (Notification.permission !== 'granted') { await checkPush(false); return done(esc(pushHealth.bad || '알림 권한이 꺼져 있어요. 다시 켜 주세요.'), true); }
-      const reg = await swReg(), sub = reg && reg.pushManager ? await reg.pushManager.getSubscription().catch(() => null) : null;
+      const reg = await swReg(); if (reg === SW_SLOW) return done('알림 준비가 늦어지고 있어요. 잠시 후 다시 눌러 주세요.');
+      const sub = reg && reg.pushManager ? await reg.pushManager.getSubscription().catch(() => null) : null;
       if (!sub) { await checkPush(false); track('push_test', { result: 'nosub' }); return done('이 기기 알림 구독이 사라졌어요. 다시 켜 주세요.', true); }
       const r = await fetch(PUSH_API + '/test-push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) });
       const j = await r.json().catch(() => ({}));
       track('push_test', { result: r.status === 429 ? 'rate' : j.ok ? 'ok' : (j.reason || r.status) });
-      if (r.status === 429) return done('테스트는 1시간에 3번까지예요. 잠시 후 다시 시도해 주세요.');
+      if (r.status === 429) return done(j.code === 'test_day' ? '오늘 테스트 10번을 다 썼어요. 내일 다시 해 주세요.' : j.code === 'test_hour' || j.code === 'rate' ? '테스트는 1시간에 3번까지예요. 잠시 후 다시 시도해 주세요.' : '요청이 많아요. 잠시 후 다시 시도해 주세요.');
       if (r.status === 404) { pushHealth.bad = '서버에서 이 기기 알림 구독을 찾지 못했어요. 다시 켜 주세요.'; renderPushBtn(); return done('서버에 이 기기 알림 구독이 없어요. 알림을 다시 켜 주세요.', true); }
       if (j.ok || j.reason === 'ok') return done('보냈어요. 몇 초 안에 ‘테스트 알림’이 안 뜨면 폰 설정 → 앱 → Chrome → 알림, 그리고 크롬의 사이트 설정 → 알림 허용을 확인해 주세요.');
       if (j.reason === 'expired') { // 서버는 이미 구독을 정리함 → 이 기기 구독도 버리고 '꺼짐'으로
@@ -1895,7 +1899,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   }
   async function unsubscribePush() {
     try {
-      const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription();
+      const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(() => no(new Error('sw')), 10000))]); const sub = await reg.pushManager.getSubscription(); // ready가 안 끝나도 10초 뒤 '꺼짐'으로 마무리
       if (sub) { await sendRemind(true, true); storeSet0('bdr.remindSig', null); await unsubServer(sub.endpoint); await sub.unsubscribe(); }
     } catch {}
     store.set(PUSH_KEY, null); pushHealth = { bad: '', checkedSrv: '' }; pushTestMsg = ''; track('push_unsubscribe');

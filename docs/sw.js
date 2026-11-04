@@ -107,6 +107,10 @@ async function handlePush() {
     await self.registration.showNotification('🧪 테스트 알림이에요', { body: '알림이 잘 오고 있어요', tag: 'bdr-test', renotify: true, ...ICON, data: { url: '/' } });
     if (!rm && !hits.length) return;
   }
+  // 최근 테스트를 보냈는데 받을 게 없음 = 늦게 온 테스트 푸시(또는 다른 푸시가 먼저 테스트를 받아 감) → 빈 '새 글' 대신 테스트로 표시
+  if (srv && srv.tp && !srv.test && !rm && !hits.length) {
+    return self.registration.showNotification('🧪 테스트 알림(지연 도착)', { body: '알림이 오고 있어요', tag: 'bdr-test', renotify: false, ...ICON, data: { url: '/' } });
+  }
   if (rm) await self.registration.showNotification(rm.title, { body: rm.body, tag: 'bdr-remind', renotify: true, requireInteraction: true, ...ICON, data: { url: rm.url } });
   const label = st.label || '관심 조건';
   if (hits.length) {
