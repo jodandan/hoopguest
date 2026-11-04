@@ -144,7 +144,7 @@ export async function resetSent(env, sh, sentAt) { await resetSentStmt(env, sh, 
 //  test: 아직 안 받아 간 표시이고 보낸 지 6분 안(테스트 푸시 TTL 5분 + 여유) → 받아 가며 ':u'로 표시
 //  tp  : 최근 1시간 안에 테스트를 보냈음(받아 갔든 아니든) → 늦게 도착한 테스트 푸시·먼저 깬 다른 푸시 때문에 빈 '새 글' 알림이 뜨지 않게
 //  행은 매시 정리에서 1시간 지나면 삭제(TP_WINDOW와 같은 기준)
-export const TEST_WINDOW = 360e3, TP_WINDOW = 3600e3;
+export const TEST_WINDOW = 360e3, TP_WINDOW = 600e3; // TP: 테스트 TTL 300초+여유. 길면 진짜 새 글 알림이 "테스트"로 보임
 export async function takeDue(env, sh, now = Date.now()) {
   await dbInit(env);
   const [a, b, c0, c] = await env.DB.batch([
