@@ -1,6 +1,6 @@
 // 앱 껍데기는 캐시 우선, 목록 데이터는 네트워크 우선 (오프라인이면 마지막 목록)
 // + 웹 푸시: 서버는 '새 글 있음' 신호만 보내고, 알림 내용은 여기서 목록을 읽어 만든다
-const CACHE = 'bdr-v12'; // 11-03 새 글 9시간 판정에서 조용한 시간(KST 0~7시) 제외
+const CACHE = 'bdr-v13'; // 11-04 테스트 알림(/test-push → /sub-state test:true)
 const PUSH_API = 'https://bdrguest-push.hoopguest.workers.dev';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-192.png', '/icon-maskable-512.png', '/ball.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
@@ -102,6 +102,15 @@ async function handlePush() {
   rems.forEach(x => remDone.add(remId(x)));
   await setState({ ...st, notified: [...notified].slice(-500), remDone: [...remDone].slice(-200) }); // 서버에서 받은 조건도 같이 저장
   const rm = remindNote(rems);
+  // 테스트 알림(/test-push): 그 알림 1개. 같은 깨어남에 받아 간 리마인더·새 글이 있으면(드묾) 그것도 이어서 띄움(서버가 이미 전달 처리했으므로)
+  if (srv && srv.test) {
+    await self.registration.showNotification('🧪 테스트 알림이에요', { body: '알림이 잘 오고 있어요', tag: 'bdr-test', renotify: true, ...ICON, data: { url: '/' } });
+    if (!rm && !hits.length) return;
+  }
+  // 최근 테스트를 보냈는데 받을 게 없음 = 늦게 온 테스트 푸시(또는 다른 푸시가 먼저 테스트를 받아 감) → 빈 '새 글' 대신 테스트로 표시
+  if (srv && srv.tp && !srv.test && !rm && !hits.length) {
+    return self.registration.showNotification('🧪 테스트 알림(지연 도착)', { body: '알림이 오고 있어요', tag: 'bdr-test', renotify: false, ...ICON, data: { url: '/' } });
+  }
   if (rm) await self.registration.showNotification(rm.title, { body: rm.body, tag: 'bdr-remind', renotify: true, requireInteraction: true, ...ICON, data: { url: rm.url } });
   const label = st.label || '관심 조건';
   if (hits.length) {
