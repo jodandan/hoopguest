@@ -524,7 +524,10 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
 @media (orientation:landscape) and (max-height:500px){.hgcourt{display:none}}
 .my .hgcourt{display:none}
 @media (min-width:640px){.hgcourt{margin-left:0;margin-right:0;width:100%;flex-basis:100%}.hgcourt .wood{left:0}.homepanel{right:auto;left:282px}}
-.sheet *,.sheet,.mapbox,#map,.mysec,.mysec *,.navbox .chip,.repbox .chip,.unkbox .chip,.state .chip,.nudge .chip{border-radius:0!important}
+.sheet *,.sheet,.mapbox,#map,.mysec,.mysec *,.navbox .chip,.repbox .chip,.unkbox .chip,.state .chip,.nudge .chip,#filtHint .chip{border-radius:0!important}
+/* 11-10 필터 알림 제안: 밑줄 링크 → 버튼(알림 제안 창과 같은 모양) */
+#filtHint b{color:var(--accent)}#filtHint .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}#filtHint .acts .chip{max-width:100%;white-space:normal}
+#filtHint .chip.primary{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--on-accent);font-weight:700}#filtHint .chip.inst{font-weight:700}
 .has-strip .dayh{position:static}
 .card .tags{flex-wrap:nowrap;min-width:0;overflow:hidden}
 .card .tags .tag{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1576,7 +1579,10 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   // 지역·시간대 필터를 처음 바꾼 직후 한 번: 이 조건으로 알림 받을지
   // 시작 조건(저장된 지역·주소 조건)을 기준으로 잡아 두어, 목록을 받기 전에 바꾼 것도 '첫 변경'으로 잡는다
   const filtSigOf = () => [S.r1, [...S.r2].join(), [...S.slot].join(), S.r1 === NEARBY ? S.home : ''].join('|');
-  let filtSig = filtSigOf(), filtWant = false, filtShown = false, filtDone = false;
+  let filtSig = filtSigOf(), filtWant = false, filtShown = false, filtDone = false, filtTimer = 0, filtReady = false;
+  // 필터를 바꾸자마자 띄우면 고르는 중이라 안 보임 → 마지막 변경 뒤 4초 지나거나 목록을 스크롤하면 띄움
+  const filtGo = () => { clearTimeout(filtTimer); filtTimer = 0; window.removeEventListener('scroll', filtGo); if (document.visibilityState !== 'visible') { filtWant = true; return; } filtReady = true; renderFiltHint(); };
+  const filtWait = () => { clearTimeout(filtTimer); filtTimer = setTimeout(filtGo, 4000); window.removeEventListener('scroll', filtGo); setTimeout(() => window.addEventListener('scroll', filtGo, { passive: true, once: true }), 800); };
   function filtLabel() {
     const r2 = [...S.r2].map(shortR2), reg = S.r1 === NEARBY ? (S.home ? `${shortR2(S.home)} 근처` : '내 근처') : r2.length ? r2.slice(0, 2).join('·') + (r2.length > 2 ? ` 외 ${r2.length - 2}` : '') : S.r1 === '전체' ? '' : S.r1;
     return [reg, [...S.slot].join('·')].filter(Boolean).join(' · ');
@@ -1584,18 +1590,19 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   function renderFiltHint() {
     const el = $('filtHint'); if (!el) return;
     const has = (S.r1 !== '전체' || S.slot.size > 0) && !(S.r1 === NEARBY && !S.home), sig = filtSigOf(); // 동네를 안 고른 '내 근처'는 알림 지역이 비어 제외
-    if (sig !== filtSig && has && !filtShown && !filtDone) filtWant = true;
+    if (sig !== filtSig && has && !filtShown && !filtDone) { filtWant = true; filtReady = false; }
     filtSig = sig;
-    if (filtWant && DATA.length) {
-      filtWant = false;
-      if (has && canNudge('filter')) { filtShown = true; askedVisit = 'filter'; store.set(NUDGE_KEY, Date.now()); track('alert_nudge', { step: 'shown', via: 'filter', board: S.board }); }
+    if (filtWant && DATA.length) { filtWant = false; if (has) filtWait(); else { clearTimeout(filtTimer); window.removeEventListener('scroll', filtGo); } }
+    if (filtReady) {
+      filtReady = false;
+      if (has && !filtShown && !filtDone && canNudge('filter')) { filtShown = true; askedVisit = 'filter'; store.set(NUDGE_KEY, Date.now()); track('alert_nudge', { step: 'shown', via: 'filter', board: S.board }); }
     }
     if (!filtShown || filtDone || !has || store.get(PUSH_KEY, null)) { el.hidden = true; return; }
     el.hidden = false;
     const lab = filtLabel();
     if (el.dataset.cta === ALERT_CTA && el.querySelector('b')) { const b = el.querySelector('b'); if (b.textContent !== lab) b.textContent = lab; return; } // 조건 이름만 바꿈(낭독 최소화)
     el.dataset.cta = ALERT_CTA; el.setAttribute('aria-live', 'polite'); setTimeout(() => el.setAttribute('aria-live', 'off'), 1500); // 처음 한 번만 읽힘
-    el.innerHTML = `이 조건(<b>${esc(lab)}</b>)으로 새 글 알림 받을까요? <button class="linkbtn" id="fhOn" type="button">${ALERT_CTA}</button><button class="linkbtn" type="button" data-inst="filter" hidden>홈 화면에 추가</button><button class="linkbtn x" id="fhX" type="button" aria-label="알림 제안 닫기">✕</button>`;
+    el.innerHTML = `<b>${esc(lab)}</b> 새 글이 올라오면 바로 알려드릴게요. 다시 찾아보지 않아도 돼요.<span class="acts"><button class="chip sm primary" id="fhOn" type="button">${ALERT_CTA}</button><button class="chip sm inst" type="button" data-inst="filter" hidden>홈 화면에 추가</button><button class="chip sm" id="fhX" type="button">괜찮아요</button></span>`;
     syncInst();
     const done = () => { const had = focusIn(el); filtDone = true; el.hidden = true; return had; };
     $('fhOn').onclick = () => { track('alert_nudge', { step: 'open', via: 'filter', board: S.board }); done(); openAlertFlow('filter'); };
