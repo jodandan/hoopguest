@@ -496,7 +496,9 @@ function ssrList(live, today, gyms = []) {
 const GYM_MIN = 5; // 체육관 페이지를 만드는 최소 글 수(최근 28일) — 얇은 페이지 방지
 const spanWord = (today, since) => { const d = Math.max(1, Math.min(28, Math.round((Date.parse(today) - Date.parse(since || today)) / 864e5) + 1)); return d >= 7 ? `최근 ${d}일` : '최근'; };
 // 검색 수요가 거의 없는 학교 체육관, 동네를 정하지 못한 체육관은 검색 노출 안 함(페이지는 유지) — 10-24
-const gymThin = g => !g.r2 || /(초등학교|중학교|고등학교|초|중|고|여중|여고)$/.test(g.name.replace(/\s/g, ''));
+// 글이 GYM_INDEX_MIN건 미만인 체육관도 noindex·사이트맵 제외 — 구글이 '발견됨-색인 안 됨'으로 쌓아 두는 얇은 페이지를 줄여 크롤을 지역 페이지에 집중(11-10)
+const GYM_INDEX_MIN = 20;
+const gymThin = g => !g.r2 || g.rows.length < GYM_INDEX_MIN || /(초등학교|중학교|고등학교|초|중|고|여중|여고)$/.test(g.name.replace(/\s/g, ''));
 const R_NAMES = new Set(['서울', '인천', '경기', ...Object.values(DISTRICTS).flat().map(d => d[0])]);
 // 기록(hist)의 카카오 장소 ID로 체육관 묶기. 이름은 가장 많이 쓴 검색어에서 앞의 지역명을 뺀 것
 function gymList(hist, live) {
