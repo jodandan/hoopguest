@@ -2,6 +2,7 @@
 // docs/r/<광역>/index.html, docs/r/<광역>/<동네>/index.html, docs/sitemap.xml
 import { mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 
 const SITE = 'https://hoopguest.kro.kr';
 const DOCS = new URL('../docs/', import.meta.url);
@@ -106,6 +107,18 @@ function cleanTitle(p) {
   return t.length < 5 ? o : (head + t).trim();
 }
 // 날짜·시작 시간이 있는 열린 글 → schema.org SportsEvent (검색 결과 '이벤트' 표시용). 장소는 제목 속 체육관 이름과 지역만(주소·좌표 저장 금지 규칙)
+// 공유 미리보기 이미지: 동네·광역 페이지와 그 동네 글 공유(/p/)는 동네 이름이 크게 들어간 그림(tools/og_images.py로 만듦), 없으면 기본 그림
+const OG_V = 3; // 카톡은 이미지를 오래 캐시함 — 그림을 바꾸면 올릴 것
+function ogImage(path) {
+  const m = (path || '').match(/^\/r\/([a-z]+)\/(?:([a-z-]+)\/)?$/);
+  if (m) { const f = m[2] ? `${m[1]}-${m[2]}` : m[1]; if (existsSync(new URL(`../docs/og/${f}.jpg`, import.meta.url))) return `${SITE}/og/${f}.jpg?v=${OG_V}`; }
+  return `${SITE}/og.jpg?v=${OG_V}`;
+}
+function regionPathOf(p) {
+  const s1 = R1[p.region1]; if (!s1) return '';
+  const d = (DISTRICTS[p.region1] || []).find(x => x[0] === p.region2);
+  return d ? `/r/${s1}/${d[1]}/` : `/r/${s1}/`;
+}
 function sportsEvent(p) {
   if (!p.date || !p.start || p.closed || p.amb || !p.region1) return null;
   const t = unent(p.title), at = h => `${p.date}T${h}:00+09:00`;
@@ -118,7 +131,7 @@ function sportsEvent(p) {
     description: `${BOARD_NAME[p.board] || '게스트'} 모집 글 · ${p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방'} 원문` };
   if (p.end && p.end > p.start) ev.endDate = at(p.end);
   // 구글 권장 항목: 이미지(사이트 대표 이미지), 주최(제목에 팀명이 있을 때만), 참가비(무료로 확인된 글만 0원)
-  ev.image = [`${SITE}/og.png?v=2`];
+  ev.image = [ogImage(regionPathOf(p))];
   if (p.team) ev.organizer = { '@type': 'SportsTeam', name: p.team, sport: 'Basketball' };
   if (p.free) { ev.isAccessibleForFree = true; ev.offers = { '@type': 'Offer', price: 0, priceCurrency: 'KRW', availability: 'https://schema.org/InStock', url: p.url, validFrom: p.posted }; }
   return ev;
@@ -142,7 +155,8 @@ function page({ path, title, desc, h1, intro, posts, today, updated, crumbs, lin
 <meta name="description" content="${esc(desc)}">${robots ? `<meta name="robots" content="${robots}">` : ''}
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:site_name" content="훕게스트">
-<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}/og.png?v=2">
+<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${ogImage(path)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${FONT_LINKS}
 <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
 <script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
@@ -311,7 +325,7 @@ function postPage(p, today) {
 <meta name="description" content="${esc(desc)}"><meta name="robots" content="noindex,follow">
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:site_name" content="훕게스트">
-<meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(t)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${SITE}/og.png?v=2">
+<meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(t)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${ogImage(regionPathOf(p))}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${FONT_LINKS}
 <script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
