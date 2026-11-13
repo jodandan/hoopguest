@@ -1409,6 +1409,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     syncSaved(); // 다른 탭에서 바꾼 저장 목록과 먼저 합침(덮어쓰기 방지)
     saved.has(k) ? saved.delete(k) : saved.add(k);
     store.set('bdr.saved', [...saved]); queueRemind();
+    track('save_post', { step: saved.has(k) ? 'add' : 'remove' });
     const sp = byKey(k), remindable = saved.has(k) && sp.date && sp.start && !sp.closed && !sp.amb && minsToStart(sp) < 30 * 1440, ask = remindable && minsToStart(sp) > 120 && canNudge('save');
     if (ask) { store.set('bdr.remindAsk', Date.now()); askedVisit = 'save'; track('alert_nudge', { step: 'shown', via: 'save' }); toastAct('저장했어요 · 시작 2시간 전에 알려드릴까요?', isIOS && !standalone ? '홈 화면에 추가' : '알림 켜기', () => { track('alert_nudge', { step: 'open', via: 'save' }); openAlertFlow('save'); }, kb && (() => document.querySelector(`#list .star[data-key="${CSS.escape(k)}"]`))); }
     else if (remindable && store.get(PUSH_KEY, null) && minsToStart(sp) > 0 && minsToStart(sp) <= 120)
