@@ -484,7 +484,7 @@ ${tHtml}<p><b>요일별</b> ${byWd.map(([w, n]) => `${w} ${n}`).join(' · ')}${b
 }
 // 첫 화면(docs/index.html)에 오늘·내일 글 목록을 미리 심어 둠 — 검색 로봇이 스크립트 없이도 내용을 읽도록
 function ssrList(live, today, gyms = []) {
-  const rows = live.filter(p => p.date && p.date >= today).slice(0, 80);
+  const rows = live.filter(p => p.date && p.date >= today && p.board !== 'team').slice(0, 80); // 팀원 모집 글은 '게스트·픽업' 목록에서 뺌
   const gl = gyms.filter(g => !gymThin(g)).slice(0, 12);
   const tail = `<section class="ssr"><h2>농구 게스트 처음이라면</h2><p><a href="/guide/">농구 게스트 구인 글 찾는 법 · 비용 · 매너 정리</a></p>${gl.length ? `<h2>자주 열리는 체육관</h2><p>${gl.map(g => `<a href="${g.path}">${esc(g.name)}</a>`).join(' · ')}</p>` : ''}</section>`;
   if (!rows.length) return '<p class="ssr-empty">지금은 모집 글이 없어요.</p>' + tail;

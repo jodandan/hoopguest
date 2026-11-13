@@ -835,7 +835,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     $('tabs').replaceChildren(...BOARDS.map(b => {
       const t = document.createElement('button');
       t.className = (counts[b.key] || 0) <= 2 ? 'tab few' : 'tab'; t.type = 'button'; t.setAttribute('role', 'tab');
-      t.setAttribute('aria-selected', S.board === b.key ? 'true' : 'false');
+      t.setAttribute('aria-selected', S.board === b.key ? 'true' : 'false'); t.setAttribute('aria-label', `${b.name} ${counts[b.key] || 0}건`);
       t.innerHTML = `<span class="tn">${esc(b.name)}</span><span class="ts" aria-hidden="true">${esc(TAB_SHORT[b.key] || b.name)}</span> <b class="n">${counts[b.key] || 0}</b>`;
       t.onclick = () => { if (S.board === b.key) return; S.board = b.key; track('board_switch', { board: b.key }); render(); passBall(true); };
       return t;
@@ -2170,7 +2170,8 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     if (p) return { boards: new Set(p.boards || ['guest']), home: GEO[p.home] ? p.home : '', km: RADII.includes(p.km) ? p.km : 10, slots: new Set(p.slots || []), days: new Set(p.days || []) };
     const f = (al && al.filters) || {};
     const days = f.days && f.days.length ? f.days : f.week === '평일' ? WEEKDAYS : f.week === '주말' ? WEEKEND : [];
-    return { boards: new Set(f.boards && f.boards.length ? f.boards : [S.board]), home: S.home || '', km: S.radius || 10, slots: new Set(f.slots || []), days: new Set(days) };
+    const ab = alertBoards().map(b => b.key), fb = (f.boards && f.boards.length ? f.boards : [S.board]).filter(k => ab.includes(k));
+    return { boards: new Set(fb.length ? fb : ['guest']), home: S.home || '', km: S.radius || 10, slots: new Set(f.slots || []), days: new Set(days) };
   }
   const daysLabel = ds => !ds.length ? '' : sameSet(ds, WEEKDAYS) ? '평일' : sameSet(ds, WEEKEND) ? '주말' : DAYS.filter(([d]) => ds.includes(d)).map(([, n]) => n).join('·');
   function buildAlert(e) {
