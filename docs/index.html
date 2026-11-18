@@ -661,6 +661,14 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
+  // 다시 온 방문인지(알림 제안은 다시 온 사람에게만): 처음 본 때에서 30분(GA 세션 기준)이 지났으면 재방문.
+  // 이 기록이 생기기 전부터 쓰던 사람(bdr.* 저장값이 이미 있음)은 재방문으로 본다
+  const REVISIT = (() => { try {
+    const t = +store.get('bdr.firstSeen', 0) || 0;
+    if (t) return Date.now() - t > 30 * 6e4;
+    const old = Object.keys(localStorage).some(k => k.startsWith('bdr.'));
+    store.set('bdr.firstSeen', old ? 1 : Date.now()); return old;
+  } catch { return false; } })();
   const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
   const R1_ORDER = ['서울', '경기', '인천'];
   const DEFAULT_BOARDS = [
@@ -1543,6 +1551,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   const ago14 = k => { const t = +store.get(k, 0) || 0; return !!t && Date.now() - t < 14 * 864e5; };
   function canNudge(kind) {
     if (MY || store.get(PUSH_KEY, null)) return false;
+    if (!REVISIT && (kind === 'return' || kind === 'filter')) return false; // 첫 방문엔 알림 제안 안 함(11/2~11/15 노출 약 30·클릭 0 후속). 저장 글 리마인더(save)는 그대로
     if (askedVisit && askedVisit !== kind) return false;
     if (askVis().some(k => k !== kind)) return false;
     if (ago14(kind === 'save' ? 'bdr.remindAsk' : NUDGE_KEY)) return false;
