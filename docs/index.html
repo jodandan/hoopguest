@@ -508,6 +508,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
 .card.same .time .s{font-size:16px;color:var(--sub)}
 .tag.soon{background:transparent;color:var(--soon);box-shadow:inset 0 0 0 1.5px currentColor}
 .tag.soon.calm{color:var(--sub)}
+.title .urg{display:inline-block;margin-right:6px;padding:0 5px;font:800 var(--fs-xs)/1.5 var(--f-body);color:var(--soon);box-shadow:inset 0 0 0 1.5px currentColor;vertical-align:2px}
 .tag.x{transform:none;font:800 11px/1.65 var(--f-body)!important;background:#A9A39A;color:#121212;box-shadow:none;padding:0 6px}
 .card.closed{opacity:1;background:color-mix(in srgb,var(--card) 70%,var(--bg))}
 .card.closed .title{color:var(--muted)}
@@ -717,6 +718,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     tags: new Set(list('g')),
     map: false,
     soon: U.get('n') === '1',
+    urgent: U.get('u') === '1',
     mapPick: null,
     favNote: null,
   };
@@ -879,7 +881,9 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
 
     const dates = [...new Set(pool.map(p => p.date).filter(Boolean))].sort().slice(0, 10);
     if (S.date !== '전체' && !dates.includes(S.date)) S.date = '전체';
-    fillRow($('rowDate'), ['전체', ...dates].map(d => chip(d === '전체' ? '전체' : dayLabel(d).replace(' · ', ' '), S.date === d, () => { S.date = d; render(); }, d === '전체' ? 'all' : '')));
+    { const un = countWith({ urgent: true, date: '전체', week: '전체', soon: false });
+      const uc = chip(`⚡ 오늘 급구 ${un}`, S.urgent, () => { S.urgent = !S.urgent; if (S.urgent) { S.date = '전체'; S.week = '전체'; S.soon = false; } track('urgent_filter', { on: S.urgent ? 'y' : 'n', count: un }); render(); }, 'urgent');
+      fillRow($('rowDate'), [uc, ...['전체', ...dates].map(d => chip(d === '전체' ? '전체' : dayLabel(d).replace(' · ', ' '), !S.urgent && S.date === d, () => { S.date = d; S.urgent = false; render(); }, d === '전체' ? 'all' : ''))]); }
     fillRow($('rowWeek'), ['전체', '주말', '평일'].map(w => chip(w === '주말' ? '주말(토·일)' : w === '평일' ? '평일(월~금)' : w, S.week === w, () => { S.week = w; render(); }, w === '전체' ? 'all' : '')));
     fillRow($('rowSlot'), [chip('전체', !S.slot.size, () => { S.slot.clear(); render(); }, 'all')].concat(['오전', '오후', '저녁'].map(s => chip(s === '오전' ? '오전(~12시)' : s === '오후' ? '오후(12~18시)' : '저녁(18시~)', S.slot.has(s), () => { S.slot.has(s) ? S.slot.delete(s) : S.slot.add(s); render(); }))));
 
@@ -921,12 +925,14 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     if (st.week !== '전체') { if (!p.date) return false; const w = wdOf(p.date); if ((st.week === '주말') !== (w === 0 || w === 6)) return false; }
     if (st.slot.size && !st.slot.has(p.slot) && !(p.amb && (st.slot.has('오전') || st.slot.has('저녁')))) return false; // 오전/저녁 미표기 글은 둘 다에 포함
     if (st.soon && !startsSoon(p)) return false;
+    if (st.urgent && !urgentOk(p)) return false;
     if (st.tags && st.tags.size) { for (const t of st.tags) if (!(p.tags || []).includes(t) && !(t === '무료' && p.free)) return false; }
     if (q && !(unent(p.title) + (p.team || '') + (p.region1 || '') + (p.region2 || '')).replace(/\s+/g, '').toLowerCase().includes(q)) return false;
     return true;
   }
   function sortRows(rows) {
     if (S.sort === 'new') return rows.sort((a, b) => Date.parse(b.posted) - Date.parse(a.posted) || b.id - a.id);
+    if (S.urgent) return rows.sort((a, b) => isUrgentTitle(b) - isUrgentTitle(a) || (a.start || '99').localeCompare(b.start || '99') || b.id - a.id);
     return rows.sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999') || isLive(a) - isLive(b) || (a.start || '99').localeCompare(b.start || '99') || b.id - a.id);
   }
   function filtered() { return sortRows(base().filter(p => passes(p, S))); }
@@ -949,6 +955,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     const cp = o => ({ ...S, r2: new Set(S.r2), slot: new Set(S.slot), ...o });
     const cand = [];
     if (S.r1 === NEARBY && S.home) for (const r of RADII) if (r > S.radius) cand.push([`${r}km로 넓히기`, cp({ radius: r }), () => { S.radius = r; store.set('bdr.radius', r); }]);
+    if (S.urgent) cand.push(['오늘 급구 풀기', cp({ urgent: false }), () => { S.urgent = false; }]);
     if (S.soon) cand.push(['시작 시간 제한 풀기', cp({ soon: false }), () => { S.soon = false; }]);
     if (S.tags.size) cand.push(['조건 태그 풀기', cp({ tags: new Set() }), () => S.tags.clear()]);
     if (S.slot.size) cand.push(['시간 전체로', cp({ slot: new Set() }), () => S.slot.clear()]);
@@ -1008,6 +1015,11 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     const d = minsToStart(p);
     return d > 0 && d <= 180;
   }
+  // 급구: 제목에 급구·긴급·당일 등이 들어간 글
+  const URG = /급구|긴급|금일|급급|급모|급하게|급히|당일|급\s*!|오늘\s*!/;
+  const isUrgentTitle = p => URG.test(unent(p.title));
+  // '오늘 급구' 필터: 오늘 경기 + 마감 아님 + 아직 시작 전(시각 모르면 포함)
+  const urgentOk = p => p.date === TODAY && !p.closed && !(p.start && !p.amb && minsToStart(p) <= 0);
 
   function soonLabel(p) {
     const d = minsToStart(p);
@@ -1075,7 +1087,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
       <div class="time">${time}</div>
       <div class="body">
         <div class="tags">${tags.join('')}</div>
-        <a class="title" href="${esc(p.url)}" target="_blank" rel="noopener" data-key="${esc(p.key)}" title="${esc(unent(p.title))}">${esc(cleanTitle(p))}<span class="sr">(새 창)</span></a>
+        <a class="title" href="${esc(p.url)}" target="_blank" rel="noopener" data-key="${esc(p.key)}" title="${esc(unent(p.title))}">${!p.closed && p.date >= TODAY && isUrgentTitle(p) ? '<b class="urg">급구</b>' : ''}${esc(cleanTitle(p))}<span class="sr">(새 창)</span></a>
         <div class="sub"><span>${seen ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${srcName(p)}</b> · ${when}${ago(p.posted)} · 조회 ${Number(p.views) || 0}</span></div><div class="cacts">${acts}</div>${dupHtml}
       </div>
       <button class="star" type="button" data-key="${esc(p.key)}" aria-pressed="${on}" aria-label="${on ? '저장 해제' : '저장'}">${on ? '★' : '☆'}</button>${more}
@@ -1165,6 +1177,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     if (S.src !== '전체') q.set('src', S.src);
     if (S.tags.size) q.set('g', [...S.tags].join(','));
     if (S.soon) q.set('n', '1');
+    if (S.urgent) q.set('u', '1');
     return q.toString();
   }
   function syncUrl() {
@@ -1191,6 +1204,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     if (S.date !== '전체') parts.push(dayLabel(S.date).replace(' · ', ' '));
     if (S.week !== '전체') parts.push(S.week);
     if (S.slot.size) parts.push([...S.slot].join('·'));
+    if (S.urgent) parts.push('오늘 급구');
     if (S.soon) parts.push('3시간 안에 시작');
     if (S.tags.size) parts.push([...S.tags].join('·'));
     if (S.savedOnly) parts.push('저장한 글');
@@ -1330,7 +1344,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   }
 
   function reset() {
-    S.r1 = '전체'; S.r2.clear(); S.date = '전체'; S.week = '전체'; S.slot.clear(); S.tags.clear(); S.soon = false; S.q = ''; S.savedOnly = false; S.src = '전체'; $('q').value = '';
+    S.r1 = '전체'; S.r2.clear(); S.date = '전체'; S.week = '전체'; S.slot.clear(); S.tags.clear(); S.soon = false; S.urgent = false; S.q = ''; S.savedOnly = false; S.src = '전체'; $('q').value = '';
     render();
   }
 
@@ -1492,14 +1506,14 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   $('tgFree').onclick = () => { const on = !S.tags.has('무료'); on ? S.tags.add('무료') : S.tags.delete('무료'); track('tag_filter', { tag: '무료', on: on ? 'y' : 'n', via: 'more' }); render(); };
   $('btnNow').onclick = () => {
     if (!S.soon && $('btnNow').classList.contains('empty')) { track('now_toggle', { on: 'empty', region: S.r1 }); toast(S.nextSoon ? `3시간 안에 시작하는 글이 없어요. 가장 빠른 건 ${S.nextSoon} 시작이에요` : '3시간 안에 시작하는 글이 없어요'); return; }
-    S.soon = !S.soon; if (S.soon) { S.date = '전체'; S.week = '전체'; S.slot.clear(); }
+    S.soon = !S.soon; if (S.soon) { S.date = '전체'; S.week = '전체'; S.slot.clear(); S.urgent = false; }
     track('now_toggle', { on: S.soon ? 'y' : 'n', region: S.r1 });
     render();
     if (S.soon && S.r1 === '전체') toast('📍 내 근처를 고르면 가까운 곳만 볼 수 있어요');
   };
   setInterval(() => { // 남은 시간 갱신: '곧 시작' 필터 중이면 다시 그리고, 아니면 꼬리표만 바꿈
     if (document.hidden || MY) return;
-    if (S.soon) { if (!document.querySelector('.navbox, .repbox, .cafebox')) render(); return; }
+    if (S.soon || S.urgent) { if (!document.querySelector('.navbox, .repbox, .cafebox')) render(); return; }
     document.querySelectorAll('#list .card[data-key]').forEach(art => {
       const p = byKey(art.dataset.key); if (!p) return;
       const want = timeTag(p), old = art.querySelector('.tag.soon, .tag.live');
