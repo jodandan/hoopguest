@@ -1026,6 +1026,9 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
   // 급구: 제목에 급구·긴급·당일 등이 들어간 글
   const URG = /급구|긴급|금일|급급|급모|급하게|급히|당일|급\s*!|오늘\s*!/;
   const isUrgentTitle = p => URG.test(unent(p.title));
+  // 빨간 '급구' 표시와 겹치지 않게 제목 속 '급구!!'·'-긴급-' 같은 말을 뺌 (카드에서만)
+  const URG_W = /[\s\[(<#\-❗️!]*(?<![가-힣])(?:당일)?(?:급+구|긴급)[\s\])>#\-❗️!]*/g;
+  function urgTitle(p) { const o = cleanTitle(p), t = o.replace(URG_W, ' ').replace(/\s{2,}/g, ' ').trim(); return t.length < 5 ? o : t; }
   // '오늘 급구' 필터: 오늘 경기 + 마감 아님 + 아직 시작 전(시각 모르면 포함)
   const urgentOk = p => p.date === TODAY && !p.closed && !(p.start && !p.amb && minsToStart(p) <= 0);
 
@@ -1074,7 +1077,8 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     if (p.board === 'match') { if (p.team) tags.push(`<span class="tag c">팀 ${esc(p.team)}</span>`); const gp = placeFor(p); if (gp) tags.push(`<span class="tag g">${esc(gp)}</span>`); }
     if (S.r1 === NEARBY && S.home && GEO[p.region2]) { const d = km(S.home, p.region2); tags.push(`<span class="tag g">${d < 2 ? '내 동네' : '약 ' + Math.round(d) + 'km'}</span>`); }
     if (p.free && !(p.tags || []).includes('무료')) tags.push('<span class="tag g">무료</span>');
-    for (const t of p.tags || []) tags.push(`<span class="tag c">${esc(t)}</span>`);
+    const urg = !p.closed && p.date >= TODAY && isUrgentTitle(p);
+    for (const t of p.tags || []) if (!(urg && t === '급구')) tags.push(`<span class="tag c">${esc(t)}</span>`); // 급구는 제목 앞 빨간 표시로만
     if (p.closed) tags.push('<span class="tag x">마감</span>');
     { const dot = tags.filter(t => t.startsWith('<span class="newdot')), rest = tags.filter(t => !t.startsWith('<span class="newdot')); const x = rest.find(t => t.includes('tag x')); const keep = rest.filter(t => t !== x).slice(0, x ? 2 : 3); if (x) keep.push(x); tags.length = 0; tags.push(...dot, ...keep); }
     const time = p.start
@@ -1095,7 +1099,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
       <div class="time">${time}</div>
       <div class="body">
         <div class="tags">${tags.join('')}</div>
-        <a class="title" href="${esc(p.url)}" target="_blank" rel="noopener" data-key="${esc(p.key)}" title="${esc(unent(p.title))}">${!p.closed && p.date >= TODAY && isUrgentTitle(p) ? '<b class="urg">급구</b>' : ''}${esc(cleanTitle(p))}<span class="sr">(새 창)</span></a>
+        <a class="title" href="${esc(p.url)}" target="_blank" rel="noopener" data-key="${esc(p.key)}" title="${esc(unent(p.title))}">${urg ? '<b class="urg">급구</b>' : ''}${esc(urg ? urgTitle(p) : cleanTitle(p))}<span class="sr">(새 창)</span></a>
         <div class="sub"><span>${seen ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${srcName(p)}</b> · ${when}${ago(p.posted)} · 조회 ${Number(p.views) || 0}</span></div><div class="cacts">${acts}</div>${dupHtml}
       </div>
       <button class="star" type="button" data-key="${esc(p.key)}" aria-pressed="${on}" aria-label="${on ? '저장 해제' : '저장'}">${on ? '★' : '☆'}</button>${more}
