@@ -16,7 +16,7 @@ if MARK in src:
     sys.exit('이미 새 색이 들어간 파일이에요 — 다시 적용하지 않아요')
 
 R = ':root:root:root:root'  # 기존 테마 규칙보다 우선
-# 마루 = 코트(머리), 빨강 = 골대(페인트존·버튼), 림 주황 = 머리 아래 띠·선택
+# 마루 = 코트(머리, 점프볼 센터서클+하프라인), 빨강 = 골대(버튼), 림 주황 = 머리 아래 띠·선택
 LIGHT = ('--bg:#FAF6EF;--card:#FFFBF4;--text:#24170C;--sub:#5A4330;--muted:#6B5440;--line:#E9D9BF;--line2:#CDB08A;--card-line:#EEDFC6;'
          '--accent:#C2410C;--accent-strong:#C2410C;--ink:#24170C;--on-ink:#FFFBF4;--chip:#FFFBF4;--chip-on:#C2410C;--chip-on-text:#fff;'
          '--seg-on:#24170C;--pill:#F3E4CA;--pill-text:#24170C;--time:#C2410C;--soon:#C8102E;--hl:#FFB000;--hl-text:#24170C;--btn-soft:#F7EAD3;--btn-soft2:#F7EAD3;'
@@ -34,8 +34,8 @@ CSS = f'''<style>
 {R}[data-theme="dark"]{{{DARK}}}
 body{{background:var(--bg)!important;background-image:none!important}}
 .hero{{position:relative;overflow:hidden;padding-bottom:6px;--hero-text:var(--hero-ink);--hero-sub:var(--hero-ink);
-  background:linear-gradient(180deg,var(--wood-gloss),transparent 60%),repeating-linear-gradient(90deg,var(--wood-seam) 0 1px,transparent 1px 58px),var(--wood)!important}}
-.hero::before{{content:"";position:absolute;right:-40px;bottom:-60px;width:220px;height:220px;border-radius:50%;border:3px solid var(--court-line);background:radial-gradient(circle,var(--paint) 0 40%,transparent 40.5%);pointer-events:none}}
+  background:linear-gradient(90deg,transparent calc(100% - 71.5px),var(--court-line) calc(100% - 71.5px),var(--court-line) calc(100% - 68.5px),transparent calc(100% - 68.5px)),linear-gradient(180deg,var(--wood-gloss),transparent 60%),repeating-linear-gradient(90deg,var(--wood-seam) 0 1px,transparent 1px 58px),var(--wood)!important}}
+.hero::before{{content:"";position:absolute;right:-40px;top:50%;width:220px;height:220px;margin-top:-110px;border-radius:50%;border:3px solid var(--court-line);pointer-events:none}}
 .hero::after{{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--rim)}}
 .hero > *{{position:relative;z-index:1}}
 .hero .brand b,.hero h1,.hero .meta,.hero a{{color:var(--hero-ink)}}
@@ -53,6 +53,15 @@ h1,h2{{text-wrap:balance}}
 @media (pointer:coarse){{.daystrip button,.search,.nowbtn,.fsum,.linkbtn{{min-height:44px!important}}.guidelnk{{display:inline-flex;align-items:center;min-height:44px}}.card .more{{min-width:44px!important;min-height:44px!important}}}}
 .card{{animation-duration:.18s,2.6s!important}}
 .toast{{transition-timing-function:cubic-bezier(.23,1,.32,1)!important}}
+/* claude-design-system-prompt: ai-slop-check·hierarchy-rhythm-review — 구분 방식 하나로(그림자·면), 상자 테두리 줄이기 */
+.tabs{{border:0!important;background:var(--pill)!important;border-radius:14px!important;padding:4px!important;gap:4px!important}}
+.tab{{border:0!important;border-radius:10px!important;box-shadow:none!important}}
+.tab[aria-selected="true"]{{background:var(--ink)!important;color:var(--on-ink)!important}}
+.daystrip button{{border-color:transparent!important;background:var(--pill)!important}}
+.daystrip button[aria-current="true"]{{background:var(--chip-on)!important;color:var(--chip-on-text)!important}}
+.ibtn{{border-color:transparent!important;background:var(--pill)!important}}
+.ibtn:active{{transform:scale(.96)!important}}
+.nowbtn,.fsum,.search{{border-color:var(--line)!important;background:var(--card)!important}}
 </style>
 '''
 out = src
