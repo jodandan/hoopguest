@@ -18,7 +18,7 @@ if MARK in src:
 R = ':root:root:root:root'  # 기존 테마 규칙보다 우선
 # 마루 = 코트(머리), 빨강 = 골대(페인트존·버튼), 림 주황 = 머리 아래 띠·선택
 LIGHT = ('--bg:#FAF6EF;--card:#FFFBF4;--text:#24170C;--sub:#5A4330;--muted:#6B5440;--line:#E9D9BF;--line2:#CDB08A;--card-line:#EEDFC6;'
-         '--accent:#E4572E;--accent-strong:#E4572E;--ink:#24170C;--on-ink:#FFFBF4;--chip:#FFFBF4;--chip-on:#E4572E;--chip-on-text:#fff;'
+         '--accent:#C2410C;--accent-strong:#C2410C;--ink:#24170C;--on-ink:#FFFBF4;--chip:#FFFBF4;--chip-on:#C2410C;--chip-on-text:#fff;'
          '--seg-on:#24170C;--pill:#F3E4CA;--pill-text:#24170C;--time:#C2410C;--soon:#C8102E;--hl:#FFB000;--hl-text:#24170C;--btn-soft:#F7EAD3;--btn-soft2:#F7EAD3;'
          '--wood:#DDB27A;--wood-gloss:rgba(255,255,255,.28);--wood-seam:rgba(120,70,20,.09);--court-line:rgba(255,255,255,.8);--paint:rgba(200,16,46,.85);'
          '--hero-ink:#24170C;--banner:#FFFBF4;--banner-ink:#24170C;--banner-sub:#6B5440;--red:#C8102E;--rim:#E4572E;--card-shadow2:0 1px 2px rgba(60,30,5,.08),0 6px 16px rgba(60,30,5,.06)')
@@ -46,9 +46,20 @@ body{{background:var(--bg)!important;background-image:none!important}}
 .tabs{{border-color:var(--line2)!important}}
 .card{{box-shadow:var(--card-shadow2)!important;border-color:transparent!important}}
 .search,.nowbtn,.fsum,.ibtn{{border-color:var(--line)!important}}
+/* 스킬 점검 반영 — web-design-guidelines·make-interfaces-feel-better·Emil Kowalski·접근성 */
+body{{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}}
+h1,h2{{text-wrap:balance}}
+.card .title{{text-wrap:pretty}}
+@media (pointer:coarse){{.daystrip button,.search,.nowbtn,.fsum,.linkbtn{{min-height:44px!important}}.guidelnk{{display:inline-flex;align-items:center;min-height:44px}}.card .more{{min-width:44px!important;min-height:44px!important}}}}
+.card{{animation-duration:.18s,2.6s!important}}
+.toast{{transition-timing-function:cubic-bezier(.23,1,.32,1)!important}}
 </style>
 '''
 out = src
+# 브라우저 위쪽 막대 색(theme-color)도 새 머리 색에 맞춤
+for a, b in (('content="#CF3326"', 'content="#DDB27A"'), ('content="#111316"', 'content="#3A2A18"'),
+             ("'#111316':'#CF3326'", "'#3A2A18':'#DDB27A'"), ("'#111316' : '#CF3326'", "'#3A2A18' : '#DDB27A'")):
+    out = out.replace(a, b)
 if not LIVE:
     tag = '<link rel="canonical" href="https://hoopguest.kro.kr/">'
     if tag not in out:
