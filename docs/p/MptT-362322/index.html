@@ -6,7 +6,7 @@
 <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:site_name" content="훕게스트">
 <meta property="og:title" content="🏀 11/18 (수) 19:30~21:30 · 경기 부천 연습경기·교류전 모집"><meta property="og:description" content="[경기, 인천] 급구11.18(수) 19:30-21:30분 부천 심원중학교 초청팀모십니다."><meta property="og:url" content="https://hoopguest.kro.kr/p/MptT-362322/"><meta property="og:image" content="https://hoopguest.kro.kr/og/gyeonggi-bucheon.jpg?v=3"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#CF3326"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=East+Sea+Dokdo&display=swap" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Oswald:wght@600;700&display=swap" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap&text=0123456789%3A~-" media="print" onload="this.media='all'">
+<meta name="theme-color" content="#DDB27A" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#3A2A18" media="(prefers-color-scheme: dark)"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=East+Sea+Dokdo&display=swap" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Oswald:wght@600;700&display=swap" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap&text=0123456789%3A~-" media="print" onload="this.media='all'">
 <script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 :root{--bg:#FFFDF6;--text:#0E0E10;--sub:#4E4E55;--line:#0E0E10;--card:#fff}
@@ -124,6 +124,25 @@ li .t.off b{color:var(--sub);opacity:1}
 li .t em{color:var(--accent)}
 .cta{background:#CF3326!important;color:#fff!important}
 @media (max-width:359px){li{padding-left:92px}li .t,li .t.off{width:82px;padding-left:10px;font-size:20px}li .t i{font-size:11px}}
+
+/* 11-19 첫 화면 새 색과 통일 — 마루 = 코트(머리: 광택 마루 + 점프볼 센터서클 + 하프라인), 빨강 = 골대, 림 주황 띠, 몸통 따뜻한 흰색 */
+:root{--bg:#FAF6EF;--text:#24170C;--sub:#5A4330;--line:#E9D9BF;--card:#FFFBF4;--card-line:#EEDFC6;--pill:#F3E4CA;--btn:#C8102E;--btn-text:#fff;--accent:#C2410C;--time:#C2410C;
+  --wood:#DDB27A;--wood-gloss:rgba(255,255,255,.28);--wood-seam2:rgba(120,70,20,.09);--court-line:rgba(255,255,255,.8);--hdr-ink:#24170C;--rim:#E4572E;--shadow2:0 1px 2px rgba(60,30,5,.08),0 6px 16px rgba(60,30,5,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15110D;--text:#F4EADF;--sub:#C8B8A6;--line:#33281F;--card:#211A14;--card-line:#33281F;--pill:#2B221A;--accent:#FF7A4D;--time:#F2B36B;
+  --wood:#5A3E22;--wood-gloss:rgba(255,220,170,.10);--wood-seam2:rgba(0,0,0,.25);--court-line:rgba(255,240,220,.55);--hdr-ink:#F8EEE2;--shadow2:0 1px 2px rgba(0,0,0,.3),0 6px 16px rgba(0,0,0,.25)}}
+:root[data-theme="dark"]{--bg:#15110D;--text:#F4EADF;--sub:#C8B8A6;--line:#33281F;--card:#211A14;--card-line:#33281F;--pill:#2B221A;--accent:#FF7A4D;--time:#F2B36B;
+  --wood:#5A3E22;--wood-gloss:rgba(255,220,170,.10);--wood-seam2:rgba(0,0,0,.25);--court-line:rgba(255,240,220,.55);--hdr-ink:#F8EEE2;--shadow2:0 1px 2px rgba(0,0,0,.3),0 6px 16px rgba(0,0,0,.25)}
+body{background:var(--bg)!important;background-image:none!important;-webkit-font-smoothing:antialiased}
+.hdr{position:relative;overflow:hidden;color:var(--hdr-ink)!important;padding-bottom:6px;
+  background:linear-gradient(90deg,transparent calc(100% - 71.5px),var(--court-line) calc(100% - 71.5px),var(--court-line) calc(100% - 68.5px),transparent calc(100% - 68.5px)),linear-gradient(180deg,var(--wood-gloss),transparent 60%),repeating-linear-gradient(90deg,var(--wood-seam2) 0 1px,transparent 1px 58px),var(--wood)!important}
+.hdr::before{content:"";position:absolute;right:22px;top:50%;width:96px;height:96px;margin-top:-48px;border-radius:50%;border:3px solid var(--court-line);pointer-events:none}
+.hdr::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--rim)}
+.hdr > *{position:relative;z-index:1}
+.hdr .brand,.hdr .brand b{color:var(--hdr-ink)!important}
+.hdr .brand i{background:#C8102E!important;color:#fff!important}
+li{border-color:transparent!important;box-shadow:var(--shadow2)}
+.cta{background:#C8102E!important;color:#fff!important}
+h1,h2{text-wrap:balance}
 </style>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}let ng=0;try{ng=localStorage.getItem('bdr.noga')==='1'}catch(e){}if(!ng&&location.hostname==='hoopguest.kro.kr'){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id=G-0DWSLR5007';document.head.appendChild(s);gtag('js',new Date());gtag('config','G-0DWSLR5007');gtag('event','shared_post_view',{post_id:'MptT:362322'});document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*="cafe.daum.net"],a[href*="cafe.naver.com"]');if(a)gtag('event','open_post',{page_type:'share',post_id:'MptT:362322',transport_type:'beacon'})});}</script>
 </head><body>
