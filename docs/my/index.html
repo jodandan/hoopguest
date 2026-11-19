@@ -727,7 +727,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     tags: new Set(list('g')),
     map: false,
     soon: U.get('n') === '1',
-    urgent: U.get('u') === '1',
+    urgent: U.get('u') === '1' && U.get('b') !== 'team',
     mapPick: null,
     favNote: null,
   };
@@ -848,7 +848,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
       t.className = (counts[b.key] || 0) <= 2 ? 'tab few' : 'tab'; t.type = 'button'; t.setAttribute('role', 'tab');
       t.setAttribute('aria-selected', S.board === b.key ? 'true' : 'false'); t.setAttribute('aria-label', `${b.name} ${counts[b.key] || 0}건`);
       t.innerHTML = `<span class="tn">${esc(b.name)}</span><span class="ts" aria-hidden="true">${esc(TAB_SHORT[b.key] || b.name)}</span> <b class="n">${counts[b.key] || 0}</b>`;
-      t.onclick = () => { if (S.board === b.key) return; S.board = b.key; track('board_switch', { board: b.key }); render(); passBall(true); };
+      t.onclick = () => { if (S.board === b.key) return; S.board = b.key; if (b.key === 'team') S.urgent = false; track('board_switch', { board: b.key }); render(); passBall(true); };
       return t;
     }));
     passBall(false);
@@ -892,7 +892,7 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     if (S.date !== '전체' && !dates.includes(S.date)) S.date = '전체';
     { const un = countWith({ urgent: true, date: '전체', week: '전체', soon: false });
       const uc = chip(`⚡ 오늘 급구 ${un}`, S.urgent, () => { S.urgent = !S.urgent; if (S.urgent) { S.date = '전체'; S.week = '전체'; S.soon = false; } track('urgent_filter', { on: S.urgent ? 'y' : 'n', count: un }); render(); }, 'urgent');
-      fillRow($('rowDate'), [uc, ...['전체', ...dates].map(d => chip(d === '전체' ? '전체' : dayLabel(d).replace(' · ', ' '), !S.urgent && S.date === d, () => { S.date = d; S.urgent = false; render(); }, d === '전체' ? 'all' : ''))]); }
+      fillRow($('rowDate'), [...(S.board === 'team' ? [] : [uc]), ...['전체', ...dates].map(d => chip(d === '전체' ? '전체' : dayLabel(d).replace(' · ', ' '), !S.urgent && S.date === d, () => { S.date = d; S.urgent = false; render(); }, d === '전체' ? 'all' : ''))]); }
     fillRow($('rowWeek'), ['전체', '주말', '평일'].map(w => chip(w === '주말' ? '주말(토·일)' : w === '평일' ? '평일(월~금)' : w, S.week === w, () => { S.week = w; render(); }, w === '전체' ? 'all' : '')));
     fillRow($('rowSlot'), [chip('전체', !S.slot.size, () => { S.slot.clear(); render(); }, 'all')].concat(['오전', '오후', '저녁'].map(s => chip(s === '오전' ? '오전(~12시)' : s === '오후' ? '오후(12~18시)' : '저녁(18시~)', S.slot.has(s), () => { S.slot.has(s) ? S.slot.delete(s) : S.slot.add(s); render(); }))));
 
