@@ -1376,11 +1376,19 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     const url = `${location.origin}/p/${p.key.replace(/[^A-Za-z0-9]/g, '-')}/`;
     const when = [p.date ? dayLabel(p.date).replace(' · ', ' ') : '', p.start || ''].filter(Boolean).join(' ');
     const text = `🏀 ${when} ${p.region1 ? regionLabel(p) : ''} 농구 같이 갈래?`.replace(/\s+/g, ' ');
-    track('share_post', { post_id: p.key, method: navigator.share ? 'share_sheet' : 'copy' });
-    try { if (navigator.share) { await navigator.share({ title: '훕게스트', text, url }); return; } }
+    const sheet = navigator.share && matchMedia('(pointer:coarse)').matches; // PC(마우스)는 공유창 대신 바로 복사 → 붙여넣기만 하면 되게
+    track('share_post', { post_id: p.key, method: sheet ? 'share_sheet' : 'copy' });
+    try { if (sheet) { await navigator.share({ title: '훕게스트', text, url }); return; } }
     catch (e) { if (e && e.name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(`${text}\n${url}`); toast('링크를 복사했어요. 카톡에 붙여 넣어 보내세요'); return; } catch {}
-    toast('공유하지 못했어요. 잠시 후 다시 눌러 주세요');
+    const all = `${text}\n${url}`, key = /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent) ? '⌘V' : 'Ctrl+V';
+    const msg = sheet ? '링크를 복사했어요. 카톡에 붙여 넣어 보내세요' : `복사했어요. ${key}로 붙여 넣으세요`;
+    try { await navigator.clipboard.writeText(all); toast(msg); return; } catch {}
+    const ta = document.createElement('textarea'); // 클립보드 API가 막힌 환경용 복사
+    ta.value = all; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-100px;opacity:0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, all.length);
+    let done = false; try { done = document.execCommand('copy'); } catch {}
+    ta.remove();
+    toast(done ? msg : '공유하지 못했어요. 잠시 후 다시 눌러 주세요');
   }
   $('list').addEventListener('keydown', e => { // Esc로 길찾기·정보 오류 선택창 닫기
     if (e.key !== 'Escape') return;
@@ -1703,16 +1711,18 @@ body{background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transpare
     const bn = (BOARDS.find(b => b.key === S.board) || {}).name;
     const parts = [bn, S.r1 !== '전체' && (S.r1 === NEARBY ? `${shortR2(S.home) || ''} ${S.radius}km 이내` : S.r1), S.r2.size && [...S.r2].join('·'), S.date !== '전체' && dayLabel(S.date), S.week !== '전체' && S.week, S.slot.size && [...S.slot].join('·'), S.tags.size && [...S.tags].join('·'), S.soon && '3시간 안에 시작'].filter(Boolean);
     const text = `훕게스트 — ${parts.join(' ')}`;
-    track('share', { method: navigator.share ? 'share_sheet' : 'copy', filters: stateQuery() || '-' });
-    try { if (navigator.share) { await navigator.share({ title: text, url }); return; } }
+    const sheet = navigator.share && matchMedia('(pointer:coarse)').matches; // PC(마우스)는 공유창 대신 바로 복사
+    const msg = sheet ? '링크를 복사했어요' : `복사했어요. ${/Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent) ? '⌘V' : 'Ctrl+V'}로 붙여 넣으세요`;
+    track('share', { method: sheet ? 'share_sheet' : 'copy', filters: stateQuery() || '-' });
+    try { if (sheet) { await navigator.share({ title: text, url }); return; } }
     catch (e) { if (e && e.name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(url); toast('링크를 복사했어요'); return; } catch {}
+    try { await navigator.clipboard.writeText(url); toast(msg); return; } catch {}
     const ta = document.createElement('textarea'); // http 등 비보안 환경용 복사
     ta.value = url; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-100px;opacity:0';
     document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, url.length);
     let done = false; try { done = document.execCommand('copy'); } catch {}
     ta.remove();
-    toast(done ? '링크를 복사했어요' : '주소창의 링크를 복사해 주세요');
+    toast(done ? msg : '주소창의 링크를 복사해 주세요');
   };
 
   renderMapPref();
