@@ -57,7 +57,9 @@ async function browser() {
   const { chromium } = (await import('node:module')).createRequire(import.meta.url)('playwright'); return chromium.launch(); // 로컬(전역 설치)
 }
 
-const jobs = JSON.parse(await readFile(new URL('.og-jobs.json', ROOT), 'utf8'));
+const JOBS = new URL('.og-jobs.json', ROOT);
+if (!existsSync(JOBS)) { console.log('글별 썸네일: 이번 수집은 페이지 생성 없음 — 건너뜀'); process.exit(0); }
+const jobs = JSON.parse(await readFile(JOBS, 'utf8'));
 await mkdir(OUT, { recursive: true });
 const want = new Set(jobs.map(j => j.file));
 let removed = 0;
