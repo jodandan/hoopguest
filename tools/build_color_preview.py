@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""11-19 색 미리보기(/new/) 만들기 — 마루 바탕 + 빨강 머리 + 크림 배너.
+"""11-19 색 미리보기(/new/) 만들기 — G3: 머리 = 코트 마루(광택·라인·빨강 페인트존), 몸통 = 따뜻한 흰색, 림 주황 띠.
 
 docs/index.html(본 사이트)을 그대로 복사하고 색만 덧씌워 docs/new/index.html로 저장한다.
 기능·구조는 본 사이트와 같고, 바뀌는 건 색과 검색엔진 비노출(noindex)뿐.
@@ -16,26 +16,36 @@ if MARK in src:
     sys.exit('이미 새 색이 들어간 파일이에요 — 다시 적용하지 않아요')
 
 R = ':root:root:root:root'  # 기존 테마 규칙보다 우선
-LIGHT = ('--bg:#E7C796;--card:#FFF8EC;--text:#2A1408;--sub:#5A3A22;--muted:#6A4A30;--line:#D3AE78;--line2:#B98F57;--card-line:#EAD3AE;'
-         '--accent:#C8102E;--accent-strong:#C8102E;--ink:#2A1408;--on-ink:#FFF8EC;--chip:#FFF8EC;--chip-on:#C8102E;--chip-on-text:#fff;'
-         '--seg-on:#C8102E;--pill:#F1DDB8;--pill-text:#2A1408;--time:#B42318;--soon:#B42318;--hl:#FFB000;--hl-text:#2A1408;--btn-soft:#F6E6C8;--btn-soft2:#F6E6C8;'
-         '--hero-bg:#C8102E;--hero-ink:#FFF8EC;--panel:#2A1408;--panel-ink:#FFF8EC;--banner:#FFF8EC;--banner-ink:#2A1408;--banner-sub:#6A4A30;--banner-bar:#C8102E')
-DARK = ('--bg:#1A1212;--card:#251A19;--text:#F5ECE2;--sub:#C9B9AE;--muted:#AE9E93;--line:#382827;--line2:#4E3836;--card-line:#382827;'
-        '--accent:#FF5A4A;--accent-strong:#E0442F;--ink:#F5ECE2;--on-ink:#1A1212;--chip:transparent;--chip-on:#E7C796;--chip-on-text:#1A1212;'
-        '--seg-on:#E7C796;--pill:#2E2120;--pill-text:#F5ECE2;--time:#E7C796;--soon:#FF6F5E;--hl:#E7C796;--hl-text:#1A1212;--btn-soft:#2A1E1D;--btn-soft2:#2A1E1D;'
-        '--hero-bg:#8E0F22;--hero-ink:#FFF2E6;--panel:#1A1212;--panel-ink:#FFF2E6;--banner:#F5ECE2;--banner-ink:#1A1212;--banner-sub:#5A4640;--banner-bar:#C8102E')
+# 마루 = 코트(머리), 빨강 = 골대(페인트존·버튼), 림 주황 = 머리 아래 띠·선택
+LIGHT = ('--bg:#FAF6EF;--card:#FFFBF4;--text:#24170C;--sub:#5A4330;--muted:#6B5440;--line:#E9D9BF;--line2:#CDB08A;--card-line:#EEDFC6;'
+         '--accent:#E4572E;--accent-strong:#E4572E;--ink:#24170C;--on-ink:#FFFBF4;--chip:#FFFBF4;--chip-on:#E4572E;--chip-on-text:#fff;'
+         '--seg-on:#24170C;--pill:#F3E4CA;--pill-text:#24170C;--time:#C2410C;--soon:#C8102E;--hl:#FFB000;--hl-text:#24170C;--btn-soft:#F7EAD3;--btn-soft2:#F7EAD3;'
+         '--wood:#DDB27A;--wood-gloss:rgba(255,255,255,.28);--wood-seam:rgba(120,70,20,.09);--court-line:rgba(255,255,255,.8);--paint:rgba(200,16,46,.85);'
+         '--hero-ink:#24170C;--banner:#FFFBF4;--banner-ink:#24170C;--banner-sub:#6B5440;--red:#C8102E;--rim:#E4572E;--card-shadow2:0 1px 2px rgba(60,30,5,.08),0 6px 16px rgba(60,30,5,.06)')
+DARK = ('--bg:#15110D;--card:#211A14;--text:#F4EADF;--sub:#C8B8A6;--muted:#AD9C8A;--line:#33281F;--line2:#4A3B2E;--card-line:#33281F;'
+        '--accent:#FF7A4D;--accent-strong:#FF7A4D;--ink:#F4EADF;--on-ink:#15110D;--chip:transparent;--chip-on:#FF7A4D;--chip-on-text:#15110D;'
+        '--seg-on:#F4EADF;--pill:#2B221A;--pill-text:#F4EADF;--time:#F2B36B;--soon:#FF6F5E;--hl:#F2B36B;--hl-text:#15110D;--btn-soft:#271F18;--btn-soft2:#271F18;'
+        '--wood:#5A3E22;--wood-gloss:rgba(255,220,170,.10);--wood-seam:rgba(0,0,0,.25);--court-line:rgba(255,240,220,.55);--paint:rgba(170,20,40,.75);'
+        '--hero-ink:#F8EEE2;--banner:#F4EADF;--banner-ink:#15110D;--banner-sub:#5A4330;--red:#C8102E;--rim:#E4572E;--card-shadow2:0 1px 2px rgba(0,0,0,.3),0 6px 16px rgba(0,0,0,.25)')
 CSS = f'''<style>
 {MARK}
 {R}{{{LIGHT}}}
 @media (prefers-color-scheme:dark){{{R}:not([data-theme="light"]){{{DARK}}}}}
 {R}[data-theme="dark"]{{{DARK}}}
-body{{background-image:none}}
-.hero{{background:var(--hero-bg)!important;--hero-text:var(--hero-ink);--hero-sub:var(--hero-ink)}}
+body{{background:var(--bg)!important;background-image:none!important}}
+.hero{{position:relative;overflow:hidden;padding-bottom:6px;--hero-text:var(--hero-ink);--hero-sub:var(--hero-ink);
+  background:linear-gradient(180deg,var(--wood-gloss),transparent 60%),repeating-linear-gradient(90deg,var(--wood-seam) 0 1px,transparent 1px 58px),var(--wood)!important}}
+.hero::before{{content:"";position:absolute;right:-40px;bottom:-60px;width:220px;height:220px;border-radius:50%;border:3px solid var(--court-line);background:radial-gradient(circle,var(--paint) 0 40%,transparent 40.5%);pointer-events:none}}
+.hero::after{{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--rim)}}
+.hero > *{{position:relative;z-index:1}}
 .hero .brand b,.hero h1,.hero .meta,.hero a{{color:var(--hero-ink)}}
-.homepanel,.brand .label{{background:var(--panel)!important;color:var(--panel-ink)!important}}
+.homepanel,.brand .label{{background:var(--red)!important;color:#fff!important}}
 .hgcourt .wood{{background:var(--banner)!important;color:var(--banner-ink)!important}}
 .hgcourt .wood small{{color:var(--banner-sub)!important}}
-.hgcourt .wood i{{background:var(--banner-bar)!important}}
+.hgcourt .wood i{{background:var(--red)!important}}
+.tabs{{border-color:var(--line2)!important}}
+.card{{box-shadow:var(--card-shadow2)!important;border-color:transparent!important}}
+.search,.nowbtn,.fsum,.ibtn{{border-color:var(--line)!important}}
 </style>
 '''
 out = src
