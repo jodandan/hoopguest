@@ -318,6 +318,8 @@ export function placeOf(title, region2) {
 let PLACE_IDS = null; // 카카오 장소 확인 결과('검색어 → 장소 ID', places.mjs). null이면 확인 전 방식
 export function setPlaceIds(m) { PLACE_IDS = m; }
 const placeChecked = q => !q || !PLACE_IDS ? q : PLACE_IDS[q] ? q : null;
+const OG_TPL = 1; // og-posts.mjs 그림 모양을 바꾸면 올릴 것(파일 이름이 바뀌어 다시 그려짐·카톡 캐시도 새로)
+const OG_JOBS = []; // 글별 썸네일 목록 → .og-jobs.json (커밋 안 함)
 function postPage(p, today) {
   const path = `/p/${postSlug(p.key)}/`, url = `${SITE}${path}`;
   const t = unent(p.title);
@@ -325,10 +327,18 @@ function postPage(p, today) {
   const when = [p.date ? abs(p.date) : '날짜는 원문 확인', p.start ? `${p.start}${p.end ? '~' + p.end : ''}` : ''].filter(Boolean).join(' ');
   const place = where(p) || '지역은 원문 확인';
   const kind = BOARD_NAME[p.board] || '게스트';
+  const kindJob = /모집$/.test(kind) ? kind : `${kind} 모집`; // '팀원 모집 모집' 방지
   const src = p.src === 'naver' ? '네이버 농심카페' : '다음 BDR 동아리농구방';
   // 미리보기 제목: 모르는 항목은 빼고 아는 것만 (예: '🏀 13:00~16:00 · 서울 강서 게스트 모집')
   const known = [p.date ? abs(p.date) : '', p.start ? `${p.start}${p.end ? '~' + p.end : ''}` : ''].filter(Boolean).join(' ');
-  const ogTitle = `🏀 ${[known, where(p)].filter(Boolean).join(' · ')} ${kind} 모집`.replace(/\s+/g, ' ');
+  const ogTitle = `🏀 ${[known, where(p)].filter(Boolean).join(' · ')} ${kindJob}`.replace(/\s+/g, ' ');
+  // 카톡 카드 제목은 두 줄 안에 '모집'까지 보이게 짧게: 끝나는 시각·괄호 앞 칸 빼기 (예: '🏀 11/21(토) 12:00 · 서울 구로 게스트 모집')
+  const shareTitle = `🏀 ${[[p.date ? abs(p.date).replace(' ', '') : '', p.start || ''].filter(Boolean).join(' '), where(p)].filter(Boolean).join(' · ')} ${kindJob}`.replace(/\s+/g, ' ');
+  // 글별 썸네일(og/p/) 재료 — 그림은 scraper/og-posts.mjs가 그리고, 다 그려지면 이 페이지의 og:image를 바꿔 끼움
+  const venue = venueOf(t);
+  const card = { date: p.date ? abs(p.date) : '', time: p.start || '', area: where(p), kind: kindJob, venue: venue && venue.length <= 16 ? venue : '', closed: !!p.closed };
+  const cardFile = `${postSlug(p.key)}-${createHash('sha1').update(OG_TPL + JSON.stringify(card)).digest('hex').slice(0, 8)}.jpg`;
+  OG_JOBS.push({ file: cardFile, page: path, ...card });
   const desc = `${t} — ${src} 글이에요. 훕게스트에서 수도권 농구 게스트·픽업게임·교류전 모집 글을 한눈에 모아봐요.`;
   const q = new URLSearchParams();
   if (p.region1) q.set('r', p.region1);
@@ -344,7 +354,7 @@ function postPage(p, today) {
 <meta name="description" content="${esc(desc)}"><meta name="robots" content="noindex,follow">
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="website"><meta property="og:locale" content="ko_KR"><meta property="og:site_name" content="훕게스트">
-<meta property="og:title" content="${esc(ogTitle)}"><meta property="og:description" content="${esc(t)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${ogImage(regionPathOf(p))}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:title" content="${esc(shareTitle)}"><meta property="og:description" content="${esc(t)}"><meta property="og:url" content="${url}"><meta property="og:image" content="${existsSync(new URL(`../docs/og/p/${cardFile}`, import.meta.url)) ? `${SITE}/og/p/${cardFile}` : ogImage(regionPathOf(p))}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#DDB27A" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#3A2A18" media="(prefers-color-scheme: dark)"><link rel="icon" href="/ball.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${FONT_LINKS}
 <script>try{var t=JSON.parse(localStorage.getItem('bdr.theme')||'null');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script>
@@ -636,12 +646,14 @@ export async function buildPages(data) {
   await rm(new URL('g/', DOCS), { recursive: true, force: true });
   // 글별 공유 페이지 (검색 노출 안 함, 사이트맵 제외)
   await rm(new URL('p/', DOCS), { recursive: true, force: true });
+  OG_JOBS.length = 0;
   for (const p of data.posts) {
     if (!p.key) continue;
     const dir = new URL(`p/${postSlug(p.key)}/`, DOCS);
     await mkdir(dir, { recursive: true });
     await writeFile(new URL('index.html', dir), postPage(p, today));
   }
+  await writeFile(new URL('../.og-jobs.json', DOCS), JSON.stringify(OG_JOBS));
   for (const [path, html] of out) {
     const dir = new URL('.' + path, DOCS);
     await mkdir(dir, { recursive: true });

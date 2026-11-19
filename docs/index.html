@@ -1426,8 +1426,7 @@ h1,h2{text-wrap:balance}
   async function sharePost(p) {
     if (!p.key) return;
     const url = `${location.origin}/p/${p.key.replace(/[^A-Za-z0-9]/g, '-')}/`;
-    const when = [p.date ? dayLabel(p.date).replace(' · ', ' ') : '', p.start || ''].filter(Boolean).join(' ');
-    const text = `🏀 ${when} ${p.region1 ? regionLabel(p) : ''} 농구 같이 갈래?`.replace(/\s+/g, ' ');
+    const text = '이거 같이 갈래? 🏀'; // 날짜·동네는 카톡 미리보기 카드(글별 썸네일·제목)에 나옴
     const sheet = navigator.share && matchMedia('(pointer:coarse)').matches; // PC(마우스)는 공유창 대신 바로 복사 → 붙여넣기만 하면 되게
     track('share_post', { post_id: p.key, method: sheet ? 'share_sheet' : 'copy' });
     try { if (sheet) { await navigator.share({ title: '훕게스트', text, url }); return; } }

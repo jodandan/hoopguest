@@ -6,3 +6,4 @@ promo/out/
 .dev.vars
 worker/.wrangler/
 node_modules/
+.og-jobs.json
