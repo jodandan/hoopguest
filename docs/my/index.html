@@ -629,6 +629,13 @@ h1,h2{text-wrap:balance}
 .dayh{padding-top:6px!important;padding-bottom:6px!important}
 @media (min-width:720px){.count .nowbtn{flex:0 1 360px;margin-right:auto}}
 @media (max-width:360px){.heroacts{gap:0}.heroacts .ibtn,.heroacts .themebtn{width:34px!important;min-width:34px}.brand h1{font-size:26px!important}}
+/* 11-23: 알림은 아이콘만으론 안 눌려(11/16~22 패널 연 사람 0) → 종 옆에 '알림' 글자 */
+.heroacts #btnPush{width:auto!important;min-width:0;flex-direction:row;gap:4px;padding:0 10px 0 8px;margin-left:2px;border-radius:999px!important;background:color-mix(in srgb,var(--hero-ink,var(--text)) 10%,transparent)!important}
+.heroacts #btnPush span{display:inline;font-size:var(--fs-sm);font-weight:800}
+.heroacts #btnPush svg{width:18px;height:18px}
+.heroacts #btnPush[aria-pressed="true"],.heroacts #btnPush[aria-expanded="true"]{background:var(--ink)!important;color:var(--on-ink)}
+@media (max-width:360px){.heroacts #btnPush{padding:0 8px 0 6px;gap:2px;margin-left:0}}
+@media (max-width:340px){.heroacts #btnPush{padding:0 8px}.heroacts #btnPush svg{display:none}}
 </style>
 </head>
 <body>
