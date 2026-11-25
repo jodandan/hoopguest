@@ -599,7 +599,9 @@ body{background:var(--bg)!important;background-image:none!important}
 body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 h1,h2{text-wrap:balance}
 .card .title{text-wrap:pretty}
-@media (pointer:coarse){.daystrip button,.search,.nowbtn,.fsum,.linkbtn{min-height:44px!important}.guidelnk{display:inline-flex;align-items:center;min-height:44px}.card .more{min-width:44px!important;min-height:44px!important}}
+@media (pointer:coarse){.daystrip button,.search,.nowbtn,.fsum,.linkbtn{min-height:44px!important}.guidelnk{display:inline-flex;align-items:center;min-height:44px}.card .more{min-width:44px!important;min-height:44px!important}.hero .guidelnk{min-height:44px;margin-top:-6px;margin-bottom:-6px;position:relative}.card a.title{min-height:44px;border-top:6px solid transparent;border-bottom:6px solid transparent;margin:-6px 0;position:relative}}
+/* 길찾기 바로 보기(2026-11-25): 접힌 카드에도 출처 줄 끝에 작은 길찾기. 펼치면 아래 버튼 줄의 길찾기만 */
+.sub .navq{font-size:var(--fs-xs);gap:3px;padding:8px 6px;margin:-8px -6px;position:relative}.sub .navq .ai{width:12px;height:12px}.card.open .sub .navq{display:none}
 .card{animation-duration:.18s,2.6s!important}
 .toast{transition-timing-function:cubic-bezier(.23,1,.32,1)!important}
 /* claude-design-system-prompt: ai-slop-check·hierarchy-rhythm-review — 구분 방식 하나로(그림자·면), 상자 테두리 줄이기 */
@@ -1161,7 +1163,7 @@ h1,h2{text-wrap:balance}
       <div class="body">
         <div class="tags">${tags.join('')}</div>
         <a class="title" href="${esc(p.url)}" target="_blank" rel="noopener" data-key="${esc(p.key)}" title="${esc(unent(p.title))}">${urg ? '<b class="urg">급구</b>' : ''}${esc(urg ? urgTitle(p) : cleanTitle(p))}<span class="sr">(새 창)</span></a>
-        <div class="sub"><span>${seen ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${srcName(p)}</b> · ${when}${ago(p.posted)} · 조회 ${Number(p.views) || 0}</span></div><div class="cacts">${acts}</div>${dupHtml}
+        <div class="sub"><span>${seen ? '<b class="seenmark">읽음</b> · ' : ''}<b class="srcm ${p.src === 'naver' ? 'nv' : 'dm'}">${srcName(p)}</b> · ${when}${ago(p.posted)} · 조회 ${Number(p.views) || 0}</span>${p.closed ? '' : nav.replace('class="nav"', 'class="nav navq"')}</div><div class="cacts">${acts}</div>${dupHtml}
       </div>
       <button class="star" type="button" data-key="${esc(p.key)}" aria-pressed="${on}" aria-label="${on ? '저장 해제' : '저장'}">${on ? '★' : '☆'}</button>${more}
       <span class="swipe" aria-hidden="true">${on ? '★ 저장<br>풀기' : '★<br>저장'}</span>
